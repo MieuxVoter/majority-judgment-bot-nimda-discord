@@ -8,14 +8,20 @@ namespace Nimda\Configuration;
  */
 class Discord
 {
+
     /**
+     * id: "855361650844631090"
+     * username: "Majority Judgment"
+     * discriminator: "6660"
+     * bot: true
+     *
      * @var array $config Nimda master configuration
      */
     public static $config = [
         /**
          * Discord API configuration
          */
-        'client_token' => '', // getenv('DISCORD_TOKEN')
+        'client_token' => '', // getenv('DISCORD_TOKEN') see self::config()
         'permissions' => 223296,
         'name' => 'Majority Judgment',
         'options' => [
@@ -37,7 +43,7 @@ class Discord
 
         'conversation' => [
             'safeword' => '!cancel',
-            'timeout' => 10, //Timeout in minutes, after this time stale conversations will be removed.
+            'timeout' => 10,  // Timeout in minutes, after this time stale conversations will be removed.
         ],
 
         'commands' => [
@@ -46,10 +52,11 @@ class Discord
              */
             'core' => [
                 # \Nimda\Core\Commands\MessageLogger::class,
-                \Nimda\Core\Commands\SayHello::class,
+                \Nimda\Core\Commands\CreatePoll::class,
+//                \Nimda\Core\Commands\SayHello::class,
 //                \Nimda\Core\Commands\PurgeChat::class,
-                \Nimda\Core\Commands\Dice::class,
-                \Nimda\Core\Commands\Quotes::class,
+//                \Nimda\Core\Commands\Dice::class,
+//                \Nimda\Core\Commands\Quotes::class,
             ],
             /**
              * Public commands created by the community. The Nimda Team are not responsible for their functionality.
@@ -74,7 +81,8 @@ class Discord
              * Core events provided with Nimda.
              */
             'core' => [
-                \Nimda\Core\Events\WelcomeMessage::class,
+//                \Nimda\Core\Events\WelcomeMessage::class,
+                \Nimda\Core\Events\VoteViaReaction::class,
             ],
             /**
              * Public events created by the community. The Nimda Team are not responsible for their functionality.
