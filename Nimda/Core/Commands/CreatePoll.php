@@ -16,7 +16,7 @@ class CreatePoll extends Command
     // The numbers are unicode, not the usual ASCII.
     protected $gradesEmotes = [
         2 => ["👍", "👎"],
-        3 => ["0️⃣", "1️⃣", "2️⃣"],
+        3 => ["👍", "👊", "👎"],
         4 => ["0️⃣", "1️⃣", "2️⃣", "3️⃣"],
         5 => ["🤬", "😣", "😐", "🙂", "😍"],
         6 => ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"],
@@ -39,19 +39,13 @@ class CreatePoll extends Command
         }
         $amountOfGrades = min(10, max(2, (int) $amountOfGrades));
 
-        $subject = $args->get('subject', "What do we choose?");
+        $subject = $args->get('subject');
+        if (empty($subject)) {
+            $subject = "What do we choose?";
+        }
         // fixme: sanitize subject   (at least truncate)
 
-//        Conversation::make($message, function (Message $message) {
-//            if($message->content === "repeat") {
-//                return Conversation::repeat("I will repeat for you, ". $this->config['message']);
-//            }
-//
-//           return $message->reply("Nice you said: ". $message->content);
-//        });
-
-        printf("Creating a poll with the following args:");
-        dump($args);
+        printf("Poll creation by '%s' with the following subject: %s", $message->author, $subject);
 
         $messageBody = sprintf(
             "%s\n_(using %d grades)_",
@@ -87,7 +81,6 @@ class CreatePoll extends Command
                 return $this->addGradingReactions($proposalMessage, $amountOfGrades)
                     ->then(function() use ($pollMessage) {
                         //print("Done adding reactions.\n");
-                        //return $pollMessage->delete();
                     });
             });
     }
@@ -108,7 +101,10 @@ class CreatePoll extends Command
             $gradeEmote = $gradesEmotes[$gradeIndex];
             $reactionAdditionPromise = new Promise(
                 function ($resolve) use ($message, $gradeEmote) {
-                    $resolve($message->react($gradeEmote));
+                    // API throttling is a thing, let's cool our horses
+                    return $message->client->addTimer(2, function () use ($resolve, $message, $gradeEmote) {
+                        $resolve($message->react($gradeEmote));
+                    });
                 }
             );
             $promises[] = $reactionAdditionPromise;
