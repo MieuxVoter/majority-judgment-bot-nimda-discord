@@ -1,11 +1,6 @@
 # Majority Judgment Discord Bot
 
-Made with Nimda, ❤, [Yasmin](https://github.com/CharlotteDunois/Yasmin)
-
-[![forthebadge](https://forthebadge.com/images/badges/built-with-love.svg)](https://forthebadge.com)
-[![forthebadge](https://forthebadge.com/images/badges/built-by-developers.svg)](https://forthebadge.com)
-[![forthebadge](https://forthebadge.com/images/badges/ages-18.svg)](https://forthebadge.com)
-[![forthebadge](https://forthebadge.com/images/badges/60-percent-of-the-time-works-every-time.svg)](https://forthebadge.com)
+Made with [Nimda](https://github.com/JABirchall/NimdaDiscord), ❤, [Yasmin](https://github.com/CharlotteDunois/Yasmin).
 
 
 ## Getting Started
@@ -16,30 +11,37 @@ Copy the `.env` to `.env.local`, and edit it with your preferences and Discord s
 that you can get over there :
 https://discordapp.com/developers/applications/
 
+    cp .env .env.local
+
+The `.env.local` file is ignored by git, so you won't commit your secrets by mistake.
+
 Edit the configuration files in `/Nimda/Configuration` as needed. 
+
+    composer install
 
 Once all packages are installed run `php start.php`
 
-## Prerequisities
+
+## Prerequisites
 
 * PHP version `^7.1`
 * PHP `PDO` extensions
 * PHP `mbstring` extension
 * A discord bot token
 
+
 ## Features
 
-* Asynchronous execution
-* Multi server suport
-* Plugin Auto-loading and Auto-installing
-* Eloquent database support for Progresql, Mysql, MSSQL, SQLite
-* Timers
+- [x] Create a poll using `!poll 5 What shall we eat tonight?`
+- [ ] Reveal the results of a poll
+- [ ] Add a proposal to a poll
+
 
 ## Coding style
 
-We use FIG PSR-2 coding style standard, please read 
-[PSR-2 coding style guide](https://github.com/php-fig/fig-standards/blob/master/accepted/PSR-2-coding-style-guide.md) 
-for specific details.
+This is a **bot**.  Made with **Promises**.  No way this is going to be pretty.
+Just enjoy yourselves.
+
 
 ## Deployment
 
@@ -47,24 +49,27 @@ This bot must be run in CLI: `php start.php`
 
 > If this ends up working we'll just craft a Dockerfile I guess.
 
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull 
-requests to us.
 
 ## Versioning
 
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the 
 [tags on this repository](https://github.com/JABirchall/NimdaDiscord/tags). 
 
+
 ## Authors
+
+### Bot Authors
+
+* **Hirondelle** - *Ninjaaa!*
+* **Roipoussiere** - *Knight*
+* **Vesporium** - *Magus*
+
+### Framework Authors
 
 * **JABirchall** - *Maintainer, Bot base, plugin system, timers*
 * **Thurston** - *Intern, events*
-* **Hirondelle** - *Ninjaaa!*
+* **[CharlotteDunois](https://github.com/CharlotteDunois)**
 
-See also the list of [contributors](https://github.com/JABirchall/NimdaDiscord/graphs/contributors) who participated in 
-this project.
 
 ## License
 
@@ -73,5 +78,5 @@ This project is licensed under GNU AGPLv3 License - see the [LICENSE](LICENSE) f
 
 ## Acknowledgments
 
-* noother
-* [CharlotteDunois](https://github.com/CharlotteDunois)
+* [MieuxVoter](https://mieuxvoter.fr)
+* [Parti Pirate](https://partipirate.org)
