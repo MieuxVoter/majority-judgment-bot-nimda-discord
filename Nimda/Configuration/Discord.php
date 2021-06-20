@@ -55,7 +55,6 @@ class Discord
              * Core commands provided with Nimda with basic fundamental features
              */
             'core' => [
-//                \Nimda\Core\Commands\MessageLogger::class,
 //                \Nimda\Core\Commands\PurgeChat::class,
 //                \Nimda\Core\Commands\SayHello::class,
 //                \Nimda\Core\Commands\Dice::class,

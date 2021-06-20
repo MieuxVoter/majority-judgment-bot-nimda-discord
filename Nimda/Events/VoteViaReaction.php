@@ -11,6 +11,18 @@ use Nimda\Configuration\Discord;
 use Nimda\Core\Event;
 
 
+/**
+ * Yes.  Discord has Buttons.
+ * This is not about Buttons.
+ * This is about Reactions.
+ * Not sure Yasmin has the API for Buttons, nor that it will ever have one.
+ *
+ * Let's read reactions, and enforce a toggle.
+ * Note that it is a weak toggle and reactions will need to be curated before tally.
+ *
+ * Class VoteViaReaction
+ * @package Nimda\Events
+ */
 class VoteViaReaction extends Event
 {
     function messageReactionAdd(MessageReaction $reaction, User $user)
@@ -24,9 +36,11 @@ class VoteViaReaction extends Event
         /** @var Message $message */
         $message = $reaction->message;
 
-        print("messageReactionAdd by ".$user->username." (".$user->id.") ".$user->email." \n");
+        printf(
+            "%s by %s (%s) on `%s'.\n",
+            $reaction->emoji, $user->username, $user->id, $message->content
+        );
 
-        $reactionIndex = 0;
         foreach ($message->reactions as $otherReaction) {
             /** @var MessageReaction $otherReaction */
 
@@ -58,8 +72,6 @@ class VoteViaReaction extends Event
                     }
                 )
             ;
-
-            $reactionIndex++;
         }
     }
 
@@ -80,17 +92,18 @@ class VoteViaReaction extends Event
             return false;  // let's not care about our own reactions
         }
 
-        return $this->isMe($message->author);  // only care about reactions on our messages
+        if ( ! $this->isMe($message->author)) {
+            return false;  // only care about reactions on our own messages
+        }
+
+        // todo(weak): only care about grade reactions (requires storing their ids upon creation)
+
+        return true;
     }
 
-    protected function isMe($user)
+    protected function isMe(User $user)
     {
-        // fixme: should also discriminate with discriminator
-        return (
-            ($user->bot)
-            &&
-            (Discord::config()['name'] == $user->username)
-        );
+        return $user === $user->client->user;
     }
 
 }
