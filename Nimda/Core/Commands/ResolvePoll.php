@@ -1,0 +1,188 @@
+<?php
+
+namespace Nimda\Core\Commands;
+
+use CharlotteDunois\Yasmin\Models\Message;
+use CharlotteDunois\Yasmin\Models\MessageEmbed;
+use CharlotteDunois\Yasmin\Models\MessageReaction;
+use Illuminate\Support\Collection;
+use Nimda\Core\Command;
+use React\Promise\Promise;
+use React\Promise\PromiseInterface;
+use function React\Promise\all;
+
+/**
+ * This command collects the tallies and displays the merit profiles for a specific poll.
+ *
+ * Class ResolvePoll
+ * @package Nimda\Core\Commands
+ */
+class ResolvePoll extends PollCommand
+{
+
+    /**
+     * @inheritDoc
+     * @throws \Throwable
+     */
+    public function trigger(Message $message, Collection $args = null): PromiseInterface
+    {
+        // It's very expensive to collect the channel's messages, let's not do that
+//        printf("Collecting channel messages…");
+//        $message->channel->fetchMessages()->then(
+//            function ($messages) {
+//                printf("Got %d channel messages.", count($messages));
+//
+//                foreach ($messages as $message) {
+//                    /** @var Message $message */
+//                    dump($message->author->username);
+////                    dump($message->id);
+//                    dump($message->content);
+//                }
+//            }
+//        );
+
+        $pollId = $args->get('pollId');
+        if (empty($pollId)) {
+            $pollId = 1; // fixme: get most recent for channel from database
+        }
+
+        $channel = $message->channel;
+
+        $dbProposalsPromise = $this->getDbProposalsForPoll($pollId);
+        $commandPromise = $dbProposalsPromise
+            ->otherwise(
+                function ($error) {
+                    printf("ERROR when calling getDbProposalsForPoll:\n");
+                    dump($error);
+                }
+            )
+            ->then(
+                function (Collection $dbProposals) use ($channel) {
+                    printf("Found proposals!\n");
+                    dump($dbProposals);
+
+                    return new Promise(
+                        function ($resolve, $reject) use ($channel, $dbProposals) {
+
+                            $proposalsMessagesIds = array_map(function ($dbProposal) {
+                                return $dbProposal->message_id;
+                            }, $dbProposals->all());
+
+                            $this
+                                ->getMessages($channel, $proposalsMessagesIds)
+                                ->otherwise(function ($error) {
+                                    printf("ERROR while fetching the messages of proposals\n:");
+                                    dump($error);
+                                })
+                                ->then(
+                                    function (array $messages) use ($resolve, $dbProposals) {
+                                        printf("Got the messages!\n");
+                                        $resolve([$dbProposals, $messages]);
+                                    },
+                                    $reject
+                                );
+
+//                            return [$dbProposals, $proposalsMessages];
+                        }
+                    );
+                }
+            )
+            ->then(
+                function ($things) use ($channel, $message) {
+                    /** @var Message[] $proposalsMessages */
+                    [$dbProposals, $proposalsMessages] = $things;
+
+//                    printf("WOOOOOOOOOOOOOOOOO!\n");
+//                    dump($dbProposals);
+
+                    printf("Got %d messages.\n", count($proposalsMessages));
+
+                    $pollTally = [];
+                    foreach ($proposalsMessages as $proposalsMessage) {
+                        /** @var MessageReaction[] $reactions */
+                        $reactions = $proposalsMessage->reactions;
+                        $proposalTally = [];
+                        foreach ($reactions as $reaction) {
+                            // fixme: limit to grades amount
+                            // fixme: curate to ensure 1 user == 1 reaction
+                            $proposalTally[] = $reaction->count - 1;  // minus the bootstrap reaction of the bot
+                        }
+                        $pollTally[] = $proposalTally;
+                    }
+
+                    $tallyString = join('_', array_map(function ($proposalTally){
+                        return join('-', $proposalTally);
+                    }, $pollTally));
+
+
+                    $messageBody = sprintf(
+                        ""
+                    );
+
+                    $imgUrl = sprintf("https://oas.mieuxvoter.fr/%s.png", $tallyString);
+
+                    $me = new MessageEmbed([
+//                        'title' => "What's a good poll subject?",
+//                        'description' => "Proposal A\n  Proposal B\n  Proposal C",
+                        'image' => [
+                            'url' => $imgUrl,
+                            'width' => 810,
+                            'height' => 500,
+                        ],
+                    ]);
+
+                    return $channel->send($messageBody, [
+                            'embed' => $me,
+//                            'files' => [
+//                                ($imgUrl),
+//                            ],
+                        ])
+                        ->otherwise(
+                            function($error) {
+                                printf("ERROR sending the result:\n");
+                                dump($error);
+                            }
+                        )
+
+                        ->then(function() use ($message) {
+                            return $message->delete();
+                        });
+
+//                    return new Promise(
+//                        function ($resolve, $reject) use ($dbProposals) {
+//
+//                            $proposalsMessagesIds = array_map(function ($dbProposal) {
+//                                return $dbProposal->message_id;
+//                            }, $dbProposals);
+//
+////                            $this->getMessages($proposalsMessagesIds);
+//
+//
+//                            return [$dbProposals, 42];
+////                            return [$dbProposals, $proposalsMessages];
+//                        }
+//                    );
+                }
+            );
+
+//        $commandPromise->then(
+//            null,
+//            function ($error) {
+//                printf("ERROR with the !result command:\n");
+//                dump($error);
+//            }
+//        );
+
+
+        $commandPromise->then(
+            null,
+            function ($error) {
+                printf("ERROR with the !result command:\n");
+                dump($error);
+            }
+        );
+
+        return $commandPromise;
+    }
+
+}

@@ -24,6 +24,7 @@ class Discord
         'client_token' => '', // getenv('DISCORD_TOKEN') see self::config()
         'permissions' => 223296,
         'name' => 'Majority Judgment',
+//        'id' => '855361650844631090',
         'options' => [
             'disableClones' => true,
             'disableEveryone' => true,
@@ -53,6 +54,7 @@ class Discord
             'core' => [
                 # \Nimda\Core\Commands\MessageLogger::class,
                 \Nimda\Core\Commands\CreatePoll::class,
+                \Nimda\Core\Commands\ResolvePoll::class,
 //                \Nimda\Core\Commands\SayHello::class,
 //                \Nimda\Core\Commands\PurgeChat::class,
 //                \Nimda\Core\Commands\Dice::class,

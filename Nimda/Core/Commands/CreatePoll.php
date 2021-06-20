@@ -5,27 +5,24 @@ namespace Nimda\Core\Commands;
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
 use Nimda\Core\Command;
+use Nimda\Core\Database;
+use Nimda\DB;
+use React\Promise\ExtendedPromiseInterface;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use function React\Promise\all;
 
-class CreatePoll extends Command
+/**
+ *
+ * !poll 5 What do you want from life?
+ *
+ *
+ *
+ * Class CreatePoll
+ * @package Nimda\Core\Commands
+ */
+class CreatePoll extends PollCommand
 {
-    // From worst to best, for each grading size. Let's hope 10 grades is enough.
-    // Would also love literal grades like "Reject", "Passable", etc.  Gotta do what we can.
-    // The numbers are unicode, not the usual ASCII.
-    protected $gradesEmotes = [
-        2 => ["👍", "👎"],
-        3 => ["👍", "👊", "👎"],
-        4 => ["0️⃣", "1️⃣", "2️⃣", "3️⃣"],
-        5 => ["🤬", "😣", "😐", "🙂", "😍"],
-        6 => ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"],
-        7 => ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣"],
-        8 => ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣"],
-        9 => ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"],
-        10 => ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"],
-        // If you add more, remember to clamp $amountOfGrades accordingly below
-    ];
 
     /**
      * @inheritDoc
@@ -45,72 +42,77 @@ class CreatePoll extends Command
         }
         // fixme: sanitize subject   (at least truncate)
 
-        printf("Poll creation by '%s' with the following subject: %s", $message->author, $subject);
+        printf("Poll creation by '%s' with the following subject: %s\n", $message->author, $subject);
 
-        $messageBody = sprintf(
+        $pollMessageBody = sprintf(
             "%s\n_(using %d grades)_",
             $subject,
             $amountOfGrades
         );
 
-        return $message
-//            ->reply($messageBody)
-            ->channel->send($messageBody)
-            ->then(function (Message $replyMessage) use ($args, $message, $amountOfGrades) {
+        $commandPromise = $message
+            ->channel->send($pollMessageBody)
+            ->then(function (Message $pollMessage) use ($args, $message, $amountOfGrades) {
 
-                return all([
-                    $this->addProposal($message, "Proposal A", $amountOfGrades),
-                    $this->addProposal($message, "Proposal B", $amountOfGrades),
-                    $this->addProposal($message, "Proposal C", $amountOfGrades),
-                ])->then(function() use ($message) {
-                    return $message->delete();
-                });
+                $addedPoll = $this->addPollToDb($message, $pollMessage);
+
+                return $addedPoll
+                    ->otherwise(function ($error) {
+                        printf("ERROR adding the poll to the database.\n");
+                        dump($error);
+                    })
+                    ->then(
+                        function ($pollFromDb) use ($pollMessage, $message, $amountOfGrades) {
+
+                            // $pollFromDb  Careful this is an object and it will HANG SILENTLY on array access
+                            //    +"id": "1"
+                            //    +"author_id": "238596624908025856"
+                            //    +"channel_id": "855665583869919233"
+                            //    +"created_at": null
+                            //    +"updated_at": null
+
+                            printf("Added new poll to database.\n");
+                            dump($pollFromDb);
+
+                            $pollId = $pollFromDb->id;
+
+                            $pollMessageEdition = $pollMessage->edit(sprintf(
+                                "Poll N°`%s`: %s",
+                                (string) $pollId ?? '?',
+                                $pollMessage->content
+                            ));
+
+                            printf("Started editing the poll message to add the poll ID…\n");
+
+                            return $pollMessageEdition
+                                ->otherwise(function ($error) {
+                                    printf("ERROR editing the poll to add its ID.\n");
+                                    dump($error);
+                                })
+                                ->then(function (Message $editedPollMessage) use ($message, $pollId, $amountOfGrades) {
+                                    printf("Done editing the poll message to add the poll ID.\n");
+                                    return all([
+                                        $this->addProposal(null, $editedPollMessage, "Proposal A", $pollId, $amountOfGrades),
+                                        $this->addProposal(null, $editedPollMessage, "Proposal B", $pollId, $amountOfGrades),
+                                        $this->addProposal(null, $editedPollMessage, "Proposal C", $pollId, $amountOfGrades),
+                                    ])->then(function() use ($message) {
+                                        return $message->delete();
+                                    });
+                                });
+
+                        }
+                    );
             });
-    }
 
-    protected function addProposal(Message $pollMessage, string $proposalName, int $amountOfGrades) : PromiseInterface
-    {
-        $messageBody = sprintf(
-            "**%s**\n",
-            $proposalName
+        $commandPromise->then(
+            null,
+            function ($error) {
+                printf("ERROR with the !poll command:\n");
+                dump($error);
+            }
         );
-        return $pollMessage
-//            ->reply($messageBody)
-            ->channel->send($messageBody)
-            ->then(function (Message $proposalMessage) use ($amountOfGrades, $pollMessage) {
-                return $this->addGradingReactions($proposalMessage, $amountOfGrades)
-                    ->then(function() use ($pollMessage) {
-                        //print("Done adding reactions.\n");
-                    });
-            });
-    }
 
-    /**
-     * Add $gradingSize different reactions to $message
-     *
-     * @param Message $message
-     * @param int $gradingSize
-     * @return PromiseInterface
-     */
-    protected function addGradingReactions(Message $message, int $gradingSize) : PromiseInterface
-    {
-        $gradesEmotes = $this->gradesEmotes[$gradingSize];
-        $promises = [];
-
-        for ($gradeIndex = 0; $gradeIndex < $gradingSize; $gradeIndex++) {
-            $gradeEmote = $gradesEmotes[$gradeIndex];
-            $reactionAdditionPromise = new Promise(
-                function ($resolve) use ($message, $gradeEmote) {
-                    // API throttling is a thing, let's cool our horses
-                    return $message->client->addTimer(2, function () use ($resolve, $message, $gradeEmote) {
-                        $resolve($message->react($gradeEmote));
-                    });
-                }
-            );
-            $promises[] = $reactionAdditionPromise;
-        }
-
-        return all($promises);
+        return $commandPromise;
     }
 
 }
