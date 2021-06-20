@@ -1,20 +1,24 @@
 {
-  "name": "mieuxvoter/majority-judgment-bot-discord",
+  "name": "mieuxvoter/majority-judgment-bot-nimda-discord",
   "description": "A Discord Bot for organizing Majority Judgment polls.",
   "minimum-stability": "stable",
   "type": "project",
   "license": "LGPL-3.0-only",
   "authors": [
     {
-      "name": "Jake Birchall",
-      "email": "JABirchall@users.noreply.github.com"
+      "name": "Dominique Merle",
+      "email": "dominique.merle.41@gmail.com"
+    },
+    {
+      "name": "MieuxVoter",
+      "email": "contact@mieuxvoter.fr"
     }
   ],
   "require": {
-    "php": ">=7.1",
-    "ext-mbstring": "~7.1",
-    "ext-pdo": "~7.1",
-    "illuminate/database": "~5.7.0",
+    "php": "^7.1",
+    "ext-mbstring": "^7.1",
+    "ext-pdo": "^7.1",
+    "illuminate/database": "^5.7",
     "laravel-discord/yasmin": "^0.8",
     "symfony/dotenv": "^5.3"
   },
