@@ -1,14 +1,9 @@
 <?php
 
-namespace Nimda\Core\Commands;
+namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
-use Nimda\Core\Command;
-use Nimda\Core\Database;
-use Nimda\DB;
-use React\Promise\ExtendedPromiseInterface;
-use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use function React\Promise\all;
 

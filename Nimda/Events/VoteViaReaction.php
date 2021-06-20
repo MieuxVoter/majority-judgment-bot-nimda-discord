@@ -1,7 +1,7 @@
 <?php
 
 
-namespace Nimda\Core\Events;
+namespace Nimda\Events;
 
 
 use CharlotteDunois\Yasmin\Models\Message;

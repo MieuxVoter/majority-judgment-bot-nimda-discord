@@ -21,10 +21,13 @@ class Discord
         /**
          * Discord API configuration
          */
-        'client_token' => '', // getenv('DISCORD_TOKEN') see self::config()
-        'permissions' => 223296,
-        'name' => 'Majority Judgment',
-//        'id' => '855361650844631090',
+
+        // These are set via getenv() – see self::config() below
+//        'client_token' => '',
+//        'permissions' => 223296,
+//        'name' => 'Majority Judgment',
+//        'discriminator' => '6660',
+
         'options' => [
             'disableClones' => true,
             'disableEveryone' => true,
@@ -52,11 +55,9 @@ class Discord
              * Core commands provided with Nimda with basic fundamental features
              */
             'core' => [
-                # \Nimda\Core\Commands\MessageLogger::class,
-                \Nimda\Core\Commands\CreatePoll::class,
-                \Nimda\Core\Commands\ResolvePoll::class,
-//                \Nimda\Core\Commands\SayHello::class,
+//                \Nimda\Core\Commands\MessageLogger::class,
 //                \Nimda\Core\Commands\PurgeChat::class,
+//                \Nimda\Core\Commands\SayHello::class,
 //                \Nimda\Core\Commands\Dice::class,
 //                \Nimda\Core\Commands\Quotes::class,
             ],
@@ -64,7 +65,8 @@ class Discord
              * Public commands created by the community. The Nimda Team are not responsible for their functionality.
              */
             'public' => [
-
+                \Nimda\Commands\CreatePoll::class,
+                \Nimda\Commands\ResolvePoll::class,
             ],
         ],
 
@@ -84,20 +86,27 @@ class Discord
              */
             'core' => [
 //                \Nimda\Core\Events\WelcomeMessage::class,
-                \Nimda\Core\Events\VoteViaReaction::class,
             ],
             /**
              * Public events created by the community. The Nimda Team are not responsible for their functionality.
              */
             'public' => [
-
+                \Nimda\Events\VoteViaReaction::class,
             ]
         ]
     ];
 
+    /**
+     * Configure these values using .env.local
+     *
+     * @return array
+     */
     public static function config() {
         $config = self::$config;
         $config['client_token'] = getenv('DISCORD_TOKEN');
+        $config['name'] = getenv('DISCORD_NAME');
+        $config['discriminator'] = getenv('DISCORD_DISCRIMINATOR');
+        $config['permissions'] = (int) getenv('DISCORD_PERMISSIONS');
         return $config;
     }
 }

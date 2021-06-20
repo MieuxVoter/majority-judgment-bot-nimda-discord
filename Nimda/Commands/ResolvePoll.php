@@ -1,6 +1,6 @@
 <?php
 
-namespace Nimda\Core\Commands;
+namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\MessageEmbed;

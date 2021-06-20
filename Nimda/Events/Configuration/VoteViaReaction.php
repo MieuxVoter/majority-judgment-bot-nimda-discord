@@ -1,6 +1,6 @@
 <?php
 
-namespace Nimda\Configuration\Core;
+namespace Nimda\Events\Configuration;
 
 class VoteViaReaction
 {

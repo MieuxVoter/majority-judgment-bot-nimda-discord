@@ -1,10 +1,9 @@
 <?php
 
-namespace Nimda\Core\Commands;
+namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Interfaces\TextChannelInterface;
 use CharlotteDunois\Yasmin\Models\Message;
-use Illuminate\Support\Collection;
 use Nimda\Core\Command;
 use Nimda\Core\Database;
 use Nimda\DB;
