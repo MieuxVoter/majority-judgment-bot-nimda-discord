@@ -6,10 +6,8 @@ use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\MessageEmbed;
 use CharlotteDunois\Yasmin\Models\MessageReaction;
 use Illuminate\Support\Collection;
-use Nimda\Core\Command;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
-use function React\Promise\all;
 
 /**
  * This command collects the tallies and displays the merit profiles for a specific poll.
@@ -35,7 +33,6 @@ class ResolvePoll extends PollCommand
 //                foreach ($messages as $message) {
 //                    /** @var Message $message */
 //                    dump($message->author->username);
-////                    dump($message->id);
 //                    dump($message->content);
 //                }
 //            }
@@ -47,6 +44,8 @@ class ResolvePoll extends PollCommand
         }
 
         $channel = $message->channel;
+
+        $deleteMessagePromise = $message->delete();
 
         $dbProposalsPromise = $this->getDbProposalsForPoll($pollId);
         $commandPromise = $dbProposalsPromise
@@ -76,24 +75,21 @@ class ResolvePoll extends PollCommand
                                 })
                                 ->then(
                                     function (array $messages) use ($resolve, $dbProposals) {
-                                        printf("Got the messages!\n");
+                                        //printf("Got the messages!\n");
                                         $resolve([$dbProposals, $messages]);
                                     },
                                     $reject
                                 );
-
-//                            return [$dbProposals, $proposalsMessages];
                         }
                     );
                 }
             )
             ->then(
-                function ($things) use ($channel, $message) {
+                function ($things) use ($channel) {
                     /** @var Message[] $proposalsMessages */
                     [$dbProposals, $proposalsMessages] = $things;
 
-//                    printf("WOOOOOOOOOOOOOOOOO!\n");
-//                    dump($dbProposals);
+                    $amountOfProposals = count($proposalsMessages);
 
                     printf("Got %d messages.\n", count($proposalsMessages));
 
@@ -121,9 +117,14 @@ class ResolvePoll extends PollCommand
 
                     $imgUrl = sprintf("https://oas.mieuxvoter.fr/%s.png", $tallyString);
 
+                    $description = "";
+                    for ($i = 0; $i < $amountOfProposals; $i++) {
+                        $description .= sprintf("%s \n", $dbProposals[$i]->name);
+                    }
+
                     $me = new MessageEmbed([
 //                        'title' => "What's a good poll subject?",
-//                        'description' => "Proposal A\n  Proposal B\n  Proposal C",
+                        'description' => $description,
                         'image' => [
                             'url' => $imgUrl,
                             'width' => 810,
@@ -142,37 +143,10 @@ class ResolvePoll extends PollCommand
                                 printf("ERROR sending the result:\n");
                                 dump($error);
                             }
-                        )
+                        );
 
-                        ->then(function() use ($message) {
-                            return $message->delete();
-                        });
-
-//                    return new Promise(
-//                        function ($resolve, $reject) use ($dbProposals) {
-//
-//                            $proposalsMessagesIds = array_map(function ($dbProposal) {
-//                                return $dbProposal->message_id;
-//                            }, $dbProposals);
-//
-////                            $this->getMessages($proposalsMessagesIds);
-//
-//
-//                            return [$dbProposals, 42];
-////                            return [$dbProposals, $proposalsMessages];
-//                        }
-//                    );
                 }
             );
-
-//        $commandPromise->then(
-//            null,
-//            function ($error) {
-//                printf("ERROR with the !result command:\n");
-//                dump($error);
-//            }
-//        );
-
 
         $commandPromise->then(
             null,
