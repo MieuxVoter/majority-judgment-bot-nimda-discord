@@ -66,14 +66,23 @@ class ResolvePoll extends PollCommand
 
                             $this
                                 ->getMessages($channel, $proposalsMessagesIds)
-                                ->otherwise(function ($error) {
-                                    printf("ERROR while fetching the messages of proposals\n:");
-                                    dump($error);
-                                })
-                                ->then(
+//                                ->otherwise(function ($error) {
+//                                    printf("ERROR while fetching the messages of proposals\n:");
+//                                    dump($error);
+//                                })
+                                ->done(
                                     function (array $messages) use ($resolve, $dbProposals) {
-                                        //printf("Got the messages!\n");
-                                        $resolve([$dbProposals, $messages]);
+                                        // Filter out messages that probably were deleted and we failed to fetch
+                                        $validProposals = array_filter($dbProposals->all(), function($key) use ($messages) {
+                                            return ! empty($messages[$key]);
+                                        }, ARRAY_FILTER_USE_KEY);
+                                        $validMessages = array_filter($messages, function($message) {
+                                            return ! empty($message);
+                                        });
+                                        $resolve([
+                                            array_values($validProposals),
+                                            array_values($validMessages),
+                                        ]);
                                     },
                                     $reject
                                 );
@@ -84,7 +93,7 @@ class ResolvePoll extends PollCommand
             ->then(
                 function ($things) use ($channel) {
                     /** @var Message[] $proposalsMessages */
-                    [$dbProposals, $proposalsMessages] = $things;
+                    [$proposalsObjects, $proposalsMessages] = $things;
 
                     $amountOfProposals = count($proposalsMessages);
 
@@ -116,7 +125,7 @@ class ResolvePoll extends PollCommand
 
                     $description = "";
                     for ($i = 0; $i < $amountOfProposals; $i++) {
-                        $description .= sprintf("➡️ %s \n", $dbProposals[$i]->name);
+                        $description .= sprintf("➡️ %s \n", $proposalsObjects[$i]->name);
                     }
 
                     $me = new MessageEmbed([

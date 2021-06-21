@@ -40,8 +40,9 @@ abstract class PollCommand extends Command
 
     /**
      * Fetch, in sequence, all the messages of $channel with the ids $messagesIds.
+     * If a message is not found, null is added.
      * This makes sequential requests to Discord.
-     * The returned Promise in an array of Message.
+     * The returned Promise in an array of Message|null.
      *
      * @param TextChannelInterface $channel
      * @param array $messagesIds
@@ -71,16 +72,28 @@ abstract class PollCommand extends Command
                             }
 
                             return $channel->fetchMessage($messagesId);
+                        },
+                        function ($error) use (&$messages, $channel, $messagesId) {
+                            $messages[] = null;
+
+                            return $channel->fetchMessage($messagesId);
                         }
                     );
                 }
 
-                return $p->then(function (?Message $message) use (&$messages) {
-                    if (null !== $message) {
-                        $messages[] = $message;
+                return $p->then(
+                    function (?Message $message) use (&$messages) {
+                        if (null !== $message) {
+                            $messages[] = $message;
+                        }
+                        return $messages;
+                    },
+                    function ($error) use (&$messages) {
+                        $messages[] = null;
+
+                        return $messages;
                     }
-                    return $messages;
-                })
+                )
                 ->done(
                     function (array $messages) use ($resolve) {
                         printf("Done fetching %d messages.\n", count($messages));
