@@ -36,9 +36,16 @@ class VoteViaReaction extends Event
         /** @var Message $message */
         $message = $reaction->message;
 
+        $proposalSubject = $message->content;
+        if (empty($proposalSubject)) {
+            if (!empty($message->embeds)) {
+                $proposalSubject = $message->embeds[0]->title;
+            }
+        }
+
         printf(
             "%s by %s (%s) on `%s'.\n",
-            $reaction->emoji, $user->username, $user->id, $message->content
+            $reaction->emoji, $user->username, $user->id, $proposalSubject
         );
 
         foreach ($message->reactions as $otherReaction) {

@@ -75,7 +75,7 @@ class CreateProposal extends PollCommand
 
                 $pollObject = $this->findPollById($pollId);
                 if (empty($pollObject)) {
-                    printf("ERROR poll `%s' not found.", $pollId);
+                    printf("ERROR poll `%s' not found.\n", $pollId);
                     return $reject();
                 }
 

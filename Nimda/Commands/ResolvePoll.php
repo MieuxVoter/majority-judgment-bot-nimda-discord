@@ -116,7 +116,7 @@ class ResolvePoll extends PollCommand
 
                     $description = "";
                     for ($i = 0; $i < $amountOfProposals; $i++) {
-                        $description .= sprintf("%s \n", $dbProposals[$i]->name);
+                        $description .= sprintf("➡️ %s \n", $dbProposals[$i]->name);
                     }
 
                     $me = new MessageEmbed([
