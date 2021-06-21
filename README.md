@@ -1,5 +1,11 @@
 # Majority Judgment Discord Bot
 
+
+[![LGPLv3](https://img.shields.io/github/license/MieuxVoter/majority-judgment-bot-nimda-discord)](./LICENSE.md)
+[![Release](https://img.shields.io/github/v/release/MieuxVoter/majority-judgment-bot-nimda-discord?sort=semver)](https://github.com/MieuxVoter/majority-judgment-bot-nimda-discord/releases)
+[![Discord Chat https://discord.gg/rAAQG9S](https://img.shields.io/discord/705322981102190593.svg)](https://discord.gg/rAAQG9S)
+
+
 Made with [Nimda](https://github.com/JABirchall/NimdaDiscord), ❤, [Yasmin](https://github.com/CharlotteDunois/Yasmin).
 
 
