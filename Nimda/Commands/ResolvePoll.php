@@ -8,6 +8,7 @@ use CharlotteDunois\Yasmin\Models\MessageReaction;
 use Illuminate\Support\Collection;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
+use function React\Promise\reject;
 
 /**
  * This command collects the tallies and displays the merit profiles for a specific poll.
@@ -24,23 +25,19 @@ class ResolvePoll extends PollCommand
      */
     public function trigger(Message $message, Collection $args = null): PromiseInterface
     {
-        // It's very expensive to collect the channel's messages, let's not do that
-//        printf("Collecting channel messages…");
-//        $message->channel->fetchMessages()->then(
-//            function ($messages) {
-//                printf("Got %d channel messages.", count($messages));
-//
-//                foreach ($messages as $message) {
-//                    /** @var Message $message */
-//                    dump($message->author->username);
-//                    dump($message->content);
-//                }
-//            }
-//        );
+        $channel = $message->channel;
+        $actor = $message->author;
 
         $pollId = $args->get('pollId');
         if (empty($pollId)) {
-            $pollId = 1; // fixme: get most recent for channel from database
+            printf("Guessing the poll identifier…\n");
+            try {
+                $pollId = $this->getLatestPollIdOfChannel($channel);
+            } catch (\Exception $exception) {
+                printf("ERROR failed to fetch the latest poll id of channel `%s'.\n", $channel);
+                dump($exception);
+                return reject();
+            }
         }
 
         $channel = $message->channel;
