@@ -44,14 +44,22 @@ class ResolvePoll extends PollCommand
 
         $deleteMessagePromise = $message->delete();
 
+        try {
+            $poll = $this->findPollById($pollId);
+        } catch (\Exception $exception) {
+            printf("ERROR no poll found with id `%s' in channel `%s'.\n", $pollId, $channel->getId());
+            dump($exception);
+            return reject();
+        }
+
         $dbProposalsPromise = $this->getDbProposalsForPoll($pollId);
         $commandPromise = $dbProposalsPromise
-            ->otherwise(
-                function ($error) {
-                    printf("ERROR when calling getDbProposalsForPoll:\n");
-                    dump($error);
-                }
-            )
+//            ->otherwise(
+//                function ($error) {
+//                    printf("ERROR when calling getDbProposalsForPoll:\n");
+//                    dump($error);
+//                }
+//            )
             ->then(
                 function (Collection $dbProposals) use ($channel) {
                     printf("Found proposals!\n");
@@ -91,7 +99,7 @@ class ResolvePoll extends PollCommand
                 }
             )
             ->then(
-                function ($things) use ($channel) {
+                function ($things) use ($channel, $poll) {
                     /** @var Message[] $proposalsMessages */
                     [$proposalsObjects, $proposalsMessages] = $things;
 
@@ -102,7 +110,10 @@ class ResolvePoll extends PollCommand
                     $pollTally = [];
                     foreach ($proposalsMessages as $proposalsMessage) {
                         /** @var MessageReaction[] $reactions */
-                        $reactions = $proposalsMessage->reactions;
+//                        $reactions = $proposalsMessage->reactions;
+                        $reactions = array_filter($proposalsMessage->reactions->all(), function (MessageReaction $reaction) use ($poll) {
+                            return in_array($reaction->emoji, $this->gradesEmotes[$poll->amountOfGrades]);
+                        });
                         $proposalTally = [];
                         foreach ($reactions as $reaction) {
                             // fixme: limit to grades amount

@@ -212,6 +212,7 @@ abstract class PollCommand extends Command
                 'messageId' => $proposalMessage->id,
                 'triggerMessageId' => $triggerMessage ? $triggerMessage->id : null,
                 'name' => $proposalName,
+                'createdAt' => new \DateTime(),
             ]);
 
             if (empty($insertedId)) {
