@@ -47,9 +47,9 @@ class CreatePoll extends PollCommand
 
         $commandPromise = $message
             ->channel->send($pollMessageBody)
-            ->then(function (Message $pollMessage) use ($args, $message, $amountOfGrades) {
+            ->then(function (Message $pollMessage) use ($args, $message, $subject, $amountOfGrades) {
 
-                $addedPoll = $this->addPollToDb($message, $pollMessage);
+                $addedPoll = $this->addPollToDb($message, $pollMessage, $subject, $amountOfGrades);
 
                 return $addedPoll
                     ->otherwise(function ($error) {
@@ -57,19 +57,12 @@ class CreatePoll extends PollCommand
                         dump($error);
                     })
                     ->then(
-                        function ($pollFromDb) use ($pollMessage, $message, $amountOfGrades) {
-
-                            // $pollFromDb  Careful this is an object and it will HANG SILENTLY on array access
-                            //    +"id": "1"
-                            //    +"author_id": "238596624908025856"
-                            //    +"channel_id": "855665583869919233"
-                            //    +"created_at": null
-                            //    +"updated_at": null
+                        function ($pollObject) use ($pollMessage, $message, $amountOfGrades) {
 
                             printf("Added new poll to database.\n");
-                            dump($pollFromDb);
+                            dump($pollObject);
 
-                            $pollId = $pollFromDb->id;
+                            $pollId = $pollObject->id;
 
                             $pollMessageEdition = $pollMessage->edit(sprintf(
                                 "Poll N°`%s`: %s",

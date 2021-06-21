@@ -64,7 +64,7 @@ class ResolvePoll extends PollCommand
                         function ($resolve, $reject) use ($channel, $dbProposals) {
 
                             $proposalsMessagesIds = array_map(function ($dbProposal) {
-                                return $dbProposal->message_id;
+                                return $dbProposal->messageId;
                             }, $dbProposals->all());
 
                             $this

@@ -2,6 +2,7 @@
 
 namespace Nimda\Commands;
 
+use CharlotteDunois\Yasmin\Interfaces\ChannelInterface;
 use CharlotteDunois\Yasmin\Interfaces\TextChannelInterface;
 use CharlotteDunois\Yasmin\Models\Message;
 use Nimda\Core\Command;
@@ -94,50 +95,83 @@ abstract class PollCommand extends Command
     }
 
     /**
+     * @param int $pollId
+     * @return object|null
+     */
+    protected function findPollById(int $pollId)
+    {
+        $result = DB::table(Database::POLLS)->find($pollId);
+
+        if (empty($result)) {
+            return null;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Note that the found poll may have a deleted poll message, and therefore may not be usable.
+     * This is because we don't listen for deletion events (yet) and do not update the database.
+     * And even when we will, you should not blindly trust this poll to have a message_id that exists,
+     * since the bot may not be online 100% of the time and may skip a deletion event for any reason.
+     *
+     * @param ChannelInterface $channel
+     * @return int The database identifier of the found poll, or zero.
+     */
+    protected function getLatestPollIdOfChannel(ChannelInterface $channel) : int
+    {
+        $result = DB::table(Database::POLLS)
+            ->select('id')
+            ->where('channelId', $channel->getId())
+            ->orderByDesc('id')
+            ->first();
+
+        if (empty($result)) {
+            return 0;
+        }
+
+        return (int) $result->id;
+    }
+
+    /**
      * The Promise yields an object, not an array.
      * Use $dbPoll->id for example, not $dbPöll['id']
      * It holds the table columns as properties:
      * +"id": "1"
-     * +"author_id": "238596624908025856"
-     * +"channel_id": "855665583869919233"
-     * +"created_at": null // these are not set, it appears
-     * +"updated_at": null
+     * +"authorId": "238596624908025856"
+     * +"channelId": "855665583869919233"
+     * +"createdAt": null
+     * +"updatedAt": null // not used right now
      * See Database.php for the complete reference.
      *
      * @param Message $triggerMessage
      * @param Message $pollMessage
+     * @param $subject
+     * @param $amountOfGrades
      * @return ExtendedPromiseInterface
      */
-    protected function addPollToDb(Message $triggerMessage, Message $pollMessage) : ExtendedPromiseInterface
+    protected function addPollToDb(Message $triggerMessage, Message $pollMessage, $subject, $amountOfGrades) : ExtendedPromiseInterface
     {
-        return new Promise(function($resolve) use ($triggerMessage, $pollMessage) {
+        return new Promise(function($resolve, $reject) use ($triggerMessage, $pollMessage, $subject, $amountOfGrades) {
 
             $insertedId = DB::table(Database::POLLS)->insertGetId([
-                'author_id' => $triggerMessage->author->id,
-                'channel_id' => $triggerMessage->channel->getId(),
-                'message_id' => $pollMessage->id,
-                'trigger_message_id' => $triggerMessage->id,
+                'authorId' => $triggerMessage->author->id,
+                'channelId' => $triggerMessage->channel->getId(),
+                'messageId' => $pollMessage->id,
+                'triggerMessageId' => $triggerMessage->id,
+                'subject' => $subject,
+                'amountOfGrades' => $amountOfGrades,
+                'createdAt' => new \DateTime(),
             ]);
 
-            $result = DB::table(Database::POLLS)
-                ->where('id', $insertedId)
-                ->first();
+            $result = DB::table(Database::POLLS)->find($insertedId);
 
             if ($result) {
-//                dump("POLL from DB");
 //                dump($result);
-                //+"id": "1"
-                //+"author_id": "238596624908025856"
-                //+"channel_id": "855665583869919233"
-                //+"created_at": null
-                //+"updated_at": null
-
                 return $resolve($result);
             }
 
-            // $reject ?  throw ?
-            return $resolve(false);
-
+            return $reject();
         });
     }
 
@@ -159,11 +193,11 @@ abstract class PollCommand extends Command
             printf("Trying to write a new proposal `%s' into the database…\n", $proposalName);
 
             $insertedId = DB::table(Database::PROPOSALS)->insertGetId([
-                'poll_id' => $pollId,
-                'author_id' => $triggerMessage ? $triggerMessage->author->id : null,
-                'channel_id' => $proposalMessage->channel->getId(),
-                'message_id' => $proposalMessage->id,
-                'trigger_message_id' => $triggerMessage ? $triggerMessage->id : null,
+                'pollId' => $pollId,
+                'authorId' => $triggerMessage ? $triggerMessage->author->id : null,
+                'channelId' => $proposalMessage->channel->getId(),
+                'messageId' => $proposalMessage->id,
+                'triggerMessageId' => $triggerMessage ? $triggerMessage->id : null,
                 'name' => $proposalName,
             ]);
 
@@ -172,9 +206,7 @@ abstract class PollCommand extends Command
                 return $reject("ERROR inserting a new proposal in the database.");
             }
 
-            $result = DB::table(Database::PROPOSALS)
-                ->where('id', $insertedId)
-                ->first();
+            $result = DB::table(Database::PROPOSALS)->find($insertedId);
 
             if ($result) {
                 dump($result);
@@ -192,7 +224,7 @@ abstract class PollCommand extends Command
             function ($resolve, $reject) use ($pollId) {
 
                 $resultsQuery = DB::table(Database::PROPOSALS)
-                    ->where('poll_id', $pollId)
+                    ->where('pollId', '=', $pollId)
                     ->limit(32) // fixme: hard limit to move to ENV and $config
                 ;
 
