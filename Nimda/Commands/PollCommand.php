@@ -241,13 +241,21 @@ abstract class PollCommand extends Command
         return new Promise(
             function ($resolve, $reject) use ($triggerMessage, $pollMessage, $proposalName, $pollId, $amountOfGrades) {
 
+                $emote = "📜";
                 $messageBody = sprintf(
-                    "**%s**\n",
+                    "%s **%s**\n",
+                    $emote,
                     $proposalName
                 );
 
+                $options = [
+                    'embed' => [
+                        'title' => $messageBody,
+                    ]
+                ];
+
                 return $pollMessage
-                    ->channel->send($messageBody)
+                    ->channel->send('', $options)
                     ->otherwise(function ($error) use ($proposalName) {
                         printf("ERROR failed to send a new message for the proposal `%s'..\n", $proposalName);
                         dump($error);
@@ -270,12 +278,12 @@ abstract class PollCommand extends Command
                         return $this
                             ->addGradingReactions($proposalMessage, $amountOfGrades)
                             ->then(
-                                function() use ($resolve, $proposalMessage) {
-                                    printf("Done adding reactions for proposal `%s'.\n", $proposalMessage->content);
+                                function() use ($resolve, $proposalName, $proposalMessage) {
+                                    printf("Done adding urn reactions for proposal `%s'.\n", $proposalName);
                                     return $resolve($proposalMessage);
                                 },
                                 function ($error) use ($reject, $proposalName) {
-                                    printf("ERROR adding grade reactions to `%s':\n", $proposalName);
+                                    printf("ERROR adding urn reactions to proposal `%s':\n", $proposalName);
                                     dump($error);
                                     return $reject($error);
                                 }
