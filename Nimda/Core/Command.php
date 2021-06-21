@@ -85,8 +85,8 @@ abstract class Command
 
     /**
      * Check if the command is configured to be loaded.
-     * Default check is if a command is set. But should be overriden
-     * with a command specific requirements.
+     * Default check is if a command is set.
+     * Should be overridden with a command specific requirements.
      *
      * @override
      * @return bool
@@ -97,12 +97,12 @@ abstract class Command
     }
 
     /**
+     * @internal Checks and parses a chat command arguments
+     *
      * @param string $message
      * @param string $pattern
      *
      * @return Collection|false
-     * @internal Checks and parses a chat command arguments
-     *
      */
     private function parseArguments($message, $pattern): Collection
     {
@@ -125,12 +125,12 @@ abstract class Command
     }
 
     /**
+     * @internal Checks a command matches
+     *
      * @param string $message
      * @param string $pattern
      *
      * @return bool
-     * @internal Checks a command matches
-     *
      */
     public function match($message, $pattern): bool
     {
