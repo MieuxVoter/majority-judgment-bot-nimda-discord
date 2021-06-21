@@ -35,18 +35,30 @@ class CreatePoll extends PollCommand
         if (empty($subject)) {
             $subject = "What do we choose?";
         }
-        // fixme: sanitize subject   (at least truncate)
+        // will perhaps fail with RTL languages
+        $subject = mb_strimwidth($subject, 0, $this->config['subjectMaxLength'], "…");
+        $subject = mb_strtoupper($subject);
 
         printf("Poll creation by '%s' with the following subject: %s\n", $message->author, $subject);
 
         $pollMessageBody = sprintf(
-            "%s\n_(using %d grades)_",
-            $subject,
+            "%s",
+            $subject
+        );
+        $description = sprintf(
+            "Using %d grades.  Add proposals with the `!proposal` command.",
             $amountOfGrades
         );
 
+        $options = [
+            'embed' => [
+                'title' => $pollMessageBody,
+                'description' => $description,
+            ]
+        ];
+
         $commandPromise = $message
-            ->channel->send($pollMessageBody)
+            ->channel->send("", $options)
             ->then(function (Message $pollMessage) use ($args, $message, $subject, $amountOfGrades) {
 
                 $addedPoll = $this->addPollToDb($message, $pollMessage, $subject, $amountOfGrades);
@@ -65,7 +77,7 @@ class CreatePoll extends PollCommand
                             $pollId = $pollObject->id;
 
                             $pollMessageEdition = $pollMessage->edit(sprintf(
-                                "Poll N°`%s`: %s",
+                                "⚖️ Poll #`%s` %s",
                                 (string) $pollId ?? '?',
                                 $pollMessage->content
                             ));
@@ -102,5 +114,15 @@ class CreatePoll extends PollCommand
 
         return $commandPromise;
     }
+
+    public function isConfigured(): bool
+    {
+        return (
+            parent::isConfigured()
+            &&
+            !empty($this->config['subjectMaxLength'])
+        );
+    }
+
 
 }

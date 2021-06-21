@@ -54,6 +54,9 @@ class CreateProposal extends PollCommand
             printf("ERROR No proposal name\n");
             return reject("No proposal name");
         }
+        // will perhaps fail with RTL languages
+        $name = mb_strimwidth($name, 0, $this->config['proposalMaxLength'], "…");
+        $name = mb_strtoupper($name);
 
         printf(
             "[%s:%s] Add proposal `%s' to the poll #%d…\n",
@@ -112,5 +115,14 @@ class CreateProposal extends PollCommand
 
         return $commandPromise;
     }
+
+    public function isConfigured(): bool
+    {
+        return (
+            parent::isConfigured() &&
+            (! empty($this->config['proposalMaxLength']))
+        );
+    }
+
 
 }
