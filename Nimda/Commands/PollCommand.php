@@ -227,7 +227,6 @@ abstract class PollCommand extends Command
                     ->where('pollId', '=', $pollId)
                     ->limit(32) // fixme: hard limit to move to ENV and $config
                 ;
-
 //                dump($resultsQuery->toSql());
 
                 $results = $resultsQuery->get();
@@ -240,7 +239,7 @@ abstract class PollCommand extends Command
     protected function addProposal(?Message $triggerMessage, Message $pollMessage, string $proposalName, int $pollId, int $amountOfGrades) : PromiseInterface
     {
         return new Promise(
-            function ($resolve) use ($triggerMessage, $pollMessage, $proposalName, $pollId, $amountOfGrades) {
+            function ($resolve, $reject) use ($triggerMessage, $pollMessage, $proposalName, $pollId, $amountOfGrades) {
 
                 $messageBody = sprintf(
                     "**%s**\n",
@@ -256,35 +255,32 @@ abstract class PollCommand extends Command
 //                    ->then(function (Message $proposalMessage) use ($triggerMessage, $pollMessage, $proposalName, $amountOfGrades) {
 //                        return resolve($this->addProposalToDb($triggerMessage, $proposalMessage, $proposalName));
 //                    })
-                    ->then(function (Message $proposalMessage) use ($resolve, $triggerMessage, $pollMessage, $proposalName, $pollId, $amountOfGrades) {
+                    ->then(function (Message $proposalMessage) use ($resolve, $reject, $triggerMessage, $pollMessage, $proposalName, $pollId, $amountOfGrades) {
 
                         $this->addProposalToDb($triggerMessage, $proposalMessage, $proposalName, $pollId)
                             ->otherwise(function ($error) {
                                 printf("ERROR when adding a proposal to the database:\n");
                                 dump($error);
                             })
-                            ->then(function ($dbProposal) {
+                            ->done(function ($dbProposal) {
                                 printf("Wrote proposal to database.\n");
-                            });
-//                        try {
-//                        } catch (\Exception $e) {
-//                            printf("ERROR: failed to write to database.\n");
-//                            dump($e);
-//                        }
+                            }, $reject);
 
-                        return $proposalMessage->client->addTimer(5, function () use ($resolve, $proposalMessage, $proposalName, $amountOfGrades) {
-                            return $this->addGradingReactions($proposalMessage, $amountOfGrades)
-                                ->then(
-                                    function() use ($resolve, $proposalMessage) {
-                                        printf("Done adding reactions for proposal `%s'.\n", $proposalMessage->content);
-                                        $resolve($proposalMessage);
-                                    },
-                                    function ($error) use ($proposalName) {
-                                        printf("ERROR adding grade reactions to `%s':\n", $proposalName);
-                                        dump($error);
-                                    }
-                                );
-                        });
+//                        return $proposalMessage->client->addTimer(5, function () use ($resolve, $proposalMessage, $proposalName, $amountOfGrades) {
+                        return $this
+                            ->addGradingReactions($proposalMessage, $amountOfGrades)
+                            ->then(
+                                function() use ($resolve, $proposalMessage) {
+                                    printf("Done adding reactions for proposal `%s'.\n", $proposalMessage->content);
+                                    return $resolve($proposalMessage);
+                                },
+                                function ($error) use ($reject, $proposalName) {
+                                    printf("ERROR adding grade reactions to `%s':\n", $proposalName);
+                                    dump($error);
+                                    return $reject($error);
+                                }
+                            );
+//                        });
                     });
 
             }

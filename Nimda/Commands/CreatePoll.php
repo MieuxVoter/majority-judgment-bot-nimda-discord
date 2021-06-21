@@ -80,9 +80,9 @@ class CreatePoll extends PollCommand
                                 ->then(function (Message $editedPollMessage) use ($message, $pollId, $amountOfGrades) {
                                     printf("Done editing the poll message to add the poll ID.\n");
                                     return all([
-                                        $this->addProposal(null, $editedPollMessage, "Proposal A", $pollId, $amountOfGrades),
-                                        $this->addProposal(null, $editedPollMessage, "Proposal B", $pollId, $amountOfGrades),
-                                        $this->addProposal(null, $editedPollMessage, "Proposal C", $pollId, $amountOfGrades),
+//                                        $this->addProposal(null, $editedPollMessage, "Proposal A", $pollId, $amountOfGrades),
+//                                        $this->addProposal(null, $editedPollMessage, "Proposal B", $pollId, $amountOfGrades),
+//                                        $this->addProposal(null, $editedPollMessage, "Proposal C", $pollId, $amountOfGrades),
                                     ])->then(function() use ($message) {
                                         return $message->delete();
                                     });
