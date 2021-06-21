@@ -37,12 +37,29 @@ abstract class PollCommand extends Command
         // If you add more, remember to clamp $amountOfGrades accordingly below
     ];
 
+    /**
+     * Fetch, in sequence, all the messages of $channel with the ids $messagesIds.
+     * This makes sequential requests to Discord.
+     * The returned Promise in an array of Message.
+     *
+     * @param TextChannelInterface $channel
+     * @param array $messagesIds
+     * @return ExtendedPromiseInterface
+     */
     protected function getMessages(TextChannelInterface $channel, array $messagesIds) : ExtendedPromiseInterface
     {
         return new Promise(
             function ($resolve, $reject) use ($channel, $messagesIds) {
 
                 $messages = [];
+
+                if (empty($messagesIds)) {
+                    printf("No messages to fetch.\n");
+                    return $resolve($messages);
+                }
+
+                printf("Starting to fetch %d messages…\n", count($messagesIds));
+
                 $p = resolve(null);
 
                 foreach ($messagesIds as $messagesId) {
@@ -57,7 +74,7 @@ abstract class PollCommand extends Command
                     );
                 }
 
-                $p->then(function (?Message $message) use (&$messages) {
+                return $p->then(function (?Message $message) use (&$messages) {
                     if (null !== $message) {
                         $messages[] = $message;
                     }
@@ -65,9 +82,9 @@ abstract class PollCommand extends Command
                 })
                 ->done(
                     function (array $messages) use ($resolve) {
-                        printf("Done fetching %d messages\n", count($messages));
-//                        dump($messages);
-                        $resolve($messages);
+                        printf("Done fetching %d messages.\n", count($messages));
+                        //dump($messages);  // flood
+                        return $resolve($messages);
                     },
                     $reject
                 );
