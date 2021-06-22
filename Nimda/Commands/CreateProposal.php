@@ -50,9 +50,24 @@ class CreateProposal extends PollCommand
         }
 
         $name = $args->get('name');
+        $name = trim($name);
         if (empty($name)) {
-            printf("ERROR No proposal name\n");
-            return reject("No proposal name");
+            printf("Showing documentation for !proposal to `%s'…\n", $actor);
+            $documentationContent =
+                "Please provide the **proposal name** as well, for example:\n".
+                "- `!proposal Bleu de Bresse`\n".
+                "- `!proposal My awesome proposal`\n".
+                "\n".
+                "You may also target a specific poll in this channel using its identifier:\n".
+                "- `!proposal 42 Don't Panic!`\n".
+                "\n".
+                "_(this message will self-destruct in a minute)_\n".
+                ""
+            ;
+            $message->delete(0, "command");
+            $documentationShowed = $this->sendToast($channel, $message, $documentationContent, [], 60);
+
+            return reject($documentationShowed);
         }
         // will perhaps fail with RTL languages
         $name = mb_strimwidth($name, 0, $this->config['proposalMaxLength'], "…");

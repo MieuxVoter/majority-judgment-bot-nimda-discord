@@ -2,9 +2,11 @@
 
 namespace Nimda\Commands;
 
+use CharlotteDunois\Yasmin\HTTP\Endpoints\Channel;
 use CharlotteDunois\Yasmin\Interfaces\ChannelInterface;
 use CharlotteDunois\Yasmin\Interfaces\TextChannelInterface;
 use CharlotteDunois\Yasmin\Models\Message;
+use CharlotteDunois\Yasmin\Models\User;
 use Nimda\Core\Command;
 use Nimda\Core\Database;
 use Nimda\DB;
@@ -335,6 +337,42 @@ abstract class PollCommand extends Command
         }
 
         return all($promises);
+    }
+
+
+    /**
+     * A Toast is a message that will delete itself after a fashion.
+     * Useful for documentation hints, error reports, etc.
+     *
+     * This method could go in a BaseCommand class or … a Service?  a Trait?
+     *
+     * @param TextChannelInterface $channel
+     * @param Message|null $replyTo
+     * @param string $content
+     * @return ExtendedPromiseInterface
+     */
+    protected function sendToast(TextChannelInterface $channel, ?Message $replyTo, string $content, array $options, int $duration) : ExtendedPromiseInterface
+    {
+        // We create a Promise object because we want ExtendedPromiseInterface, not PromiseInterface
+        // Perhaps there is another way…?
+        return new Promise(function ($resolve, $reject) use ($channel, $replyTo, $content, $options, $duration) {
+
+            if (empty($replyTo)) {
+                $toastSent = $channel->send($content, $options);
+            } else {
+                $toastSent = $replyTo->reply($content, $options);
+            }
+
+            return $toastSent
+                ->otherwise($reject)
+                ->then(function (Message $toast) use ($resolve, $reject, $duration) {
+                    return $toast
+                        ->delete($duration, "toast")
+                        ->otherwise($reject)
+                        ->then($resolve);
+                });
+
+        });
     }
 
 }

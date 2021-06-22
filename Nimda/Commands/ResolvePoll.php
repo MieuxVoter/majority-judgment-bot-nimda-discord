@@ -54,6 +54,7 @@ class ResolvePoll extends PollCommand
 
         $dbProposalsPromise = $this->getDbProposalsForPoll($pollId);
         $commandPromise = $dbProposalsPromise
+            // Error is caught by bottom handler.  Do we need this?
 //            ->otherwise(
 //                function ($error) {
 //                    printf("ERROR when calling getDbProposalsForPoll:\n");
@@ -116,8 +117,12 @@ class ResolvePoll extends PollCommand
                         });
                         $proposalTally = [];
                         foreach ($reactions as $reaction) {
-                            // fixme: limit to grades amount
                             // fixme: curate to ensure 1 user == 1 reaction
+                            // This is tricky, since fetching all the users of all the reactions
+                            // is going to take a long time (sequential, paginated requests).
+                            // It's also not going to scale well, compared to this naive usage of `count`.
+                            // We should probably offer both
+
                             $proposalTally[] = $reaction->count - 1;  // minus the bootstrap reaction of the bot
                         }
                         $pollTally[] = $proposalTally;
