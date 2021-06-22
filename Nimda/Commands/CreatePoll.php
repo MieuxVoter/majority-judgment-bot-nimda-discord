@@ -6,8 +6,12 @@ use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
 use React\Promise\PromiseInterface;
 use function React\Promise\all;
+use function React\Promise\reject;
 
 /**
+ *
+ * !poll What do you want from life?
+ *
  *
  * !poll 5 What do you want from life?
  *
@@ -24,16 +28,46 @@ class CreatePoll extends PollCommand
      */
     public function trigger(Message $message, Collection $args = null): PromiseInterface
     {
+        $defaultAmountOfGrades = 5;
+        $minimumAmountOfGrades = 2;
+        $maximumAmountOfGrades = 10;
+
+        $channel = $message->channel;
+        $actor = $message->author;
 
         $amountOfGrades = $args->get('grades');
         if (empty($amountOfGrades)) {
-            $amountOfGrades = 7;
+            $amountOfGrades = $defaultAmountOfGrades;
         }
-        $amountOfGrades = min(10, max(2, (int) $amountOfGrades));
+        $amountOfGrades = min($maximumAmountOfGrades, max($minimumAmountOfGrades, (int) $amountOfGrades));
 
-        $subject = $args->get('subject');
+        $subject = trim($args->get('subject'));
         if (empty($subject)) {
-            $subject = "What do we choose?";
+            printf("Showing documentation for !poll to `%s'…\n", $actor->username);
+            $documentationContent =
+                "Please provide the **poll subject** as well, for example:\n".
+                "⌨️ `!poll What should we do tonight?`\n".
+                "⌨️ `!poll Which do you prefer?`\n".
+                "\n".
+                "You may also provide how many grades should be available ".
+                sprintf(
+                    "_(default=`%d`, min=`%d`, max=`%d`)_:\n",
+                    $defaultAmountOfGrades, $minimumAmountOfGrades, $maximumAmountOfGrades
+                ).
+                "⌨️ `!poll 3 What's the answer?`\n".
+                "_(this syntax is under construction and may change without warning)_\n".
+                "\n".
+                "Thank you for using Majority Judgment!\n".
+                "You will find the source code of this bot here:\n".
+                "https://github.com/MieuxVoter/majority-judgment-bot-nimda-discord\n".
+                "\n".
+                "_(this message will self-destruct in a minute)_\n".
+                ""
+            ;
+            $message->delete(0, "command");
+            $documentationShowed = $this->sendToast($channel, $message, $documentationContent, [], 60);
+
+            return reject($documentationShowed);
         }
         // will perhaps fail with RTL languages
         $subject = mb_strimwidth($subject, 0, $this->config['subjectMaxLength'], "…");
