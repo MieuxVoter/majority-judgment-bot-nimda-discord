@@ -20,6 +20,7 @@
     "ext-pdo": "^7.1",
     "illuminate/database": "^5.7",
     "laravel-discord/yasmin": "^0.8",
+    "mieuxvoter/majority-judgment": "^1.0",
     "symfony/dotenv": "^5.3",
     "symfony/var-dumper": "^5.3"
   },
@@ -31,7 +32,5 @@
     "psr-4": {
       "Nimda\\": "Nimda/"
     }
-  },
-  "require-dev": {
   }
 }

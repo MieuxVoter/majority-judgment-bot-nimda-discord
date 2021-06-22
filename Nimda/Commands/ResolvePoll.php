@@ -6,6 +6,9 @@ use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\MessageEmbed;
 use CharlotteDunois\Yasmin\Models\MessageReaction;
 use Illuminate\Support\Collection;
+use MieuxVoter\MajorityJudgment\MajorityJudgmentDeliberator;
+use MieuxVoter\MajorityJudgment\Model\Result\ProposalResult;
+use MieuxVoter\MajorityJudgment\Model\Tally\TwoArraysPollTally;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use function React\Promise\reject;
@@ -108,6 +111,7 @@ class ResolvePoll extends PollCommand
 
                     printf("Got %d messages.\n", count($proposalsMessages));
 
+                    $amountOfParticipants = 0;
                     $pollTally = [];
                     foreach ($proposalsMessages as $proposalsMessage) {
                         /** @var MessageReaction[] $reactions */
@@ -116,22 +120,37 @@ class ResolvePoll extends PollCommand
                             return in_array($reaction->emoji, $this->gradesEmotes[$poll->amountOfGrades]);
                         });
                         $proposalTally = [];
+                        $amountOfJudgesOfProposal = 0;
                         foreach ($reactions as $reaction) {
                             // fixme: curate to ensure 1 user == 1 reaction
                             // This is tricky, since fetching all the users of all the reactions
                             // is going to take a long time (sequential, paginated requests).
                             // It's also not going to scale well, compared to this naive usage of `count`.
-                            // We should probably offer both
+                            // We should probably offer both, this one first and then edit it with curated results?
 
-                            $proposalTally[] = $reaction->count - 1;  // minus the bootstrap reaction of the bot
+                            $amountOfJudgesOfGrade = $reaction->count - 1;  // minus the bootstrap reaction of the bot
+                            $amountOfJudgesOfProposal += $amountOfJudgesOfGrade;
+
+                            $proposalTally[] = $amountOfJudgesOfGrade;
                         }
+                        // Same: getting the amount of judges from the max() is incorrect
+                        $amountOfParticipants = max($amountOfParticipants, $amountOfJudgesOfProposal);
+
                         $pollTally[] = $proposalTally;
                     }
 
-                    $tallyString = join('_', array_map(function ($proposalTally){
-                        return join('-', $proposalTally);
-                    }, $pollTally));
+                    $deliberator = new MajorityJudgmentDeliberator();
+                    $result = $deliberator->deliberate(new TwoArraysPollTally(
+                        $amountOfParticipants,
+                        $proposalsObjects,
+                        $pollTally
+                    ));
 
+                    $leaderboard = $result->getProposalResults();
+
+                    $tallyString = join('_', array_map(function (ProposalResult $proposalResult){
+                        return join('-', $proposalResult->getTally());
+                    }, $leaderboard));
 
                     $messageBody = sprintf(
                         ""
@@ -140,12 +159,16 @@ class ResolvePoll extends PollCommand
                     $imgUrl = sprintf("https://oas.mieuxvoter.fr/%s.png", $tallyString);
 
                     $description = "";
-                    for ($i = 0; $i < $amountOfProposals; $i++) {
-                        $description .= sprintf("➡️ %s \n", $proposalsObjects[$i]->name);
+                    foreach ($leaderboard as $proposalResult) {
+                        $description .= sprintf(
+                            "`%d` ➡️ %s \n",
+                            $proposalResult->getRank(),
+                            $proposalResult->getProposal()->name
+                        );
                     }
 
                     $me = new MessageEmbed([
-//                        'title' => "What's a good poll subject?",
+                        'title' => $poll->subject,
                         'description' => $description,
                         'image' => [
                             'url' => $imgUrl,
