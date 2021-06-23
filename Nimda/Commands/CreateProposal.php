@@ -81,7 +81,7 @@ class CreateProposal extends PollCommand
         $commandPromise = new Promise(
             function ($resolve, $reject) use ($channel, $message, $name, $pollId) {
 
-                $triggerMessageDeletion = $message->delete(0, "cleanup");
+                $triggerMessageDeletion = $message->delete(0, "command");
                 $triggerMessageDeletion->done(); // todo: is done() blocking?  Care about errors as well!
 
                 if (0 === $pollId) {
@@ -90,20 +90,33 @@ class CreateProposal extends PollCommand
 
                 $pollObject = $this->findPollById($pollId);
                 if (empty($pollObject)) {
-                    printf("ERROR poll `%s' not found.\n", $pollId);
-                    return $reject();
+                    $pollEmoji = "⚖️";
+                    return $reject($this->sendToast(
+                        $channel,
+                        $message,
+                        sprintf(
+                            "The poll %s `%d` could not be found.  ".
+                            "Either you misspelled it or we deleted the database, ".
+                            "because we have no migration system in-place during alpha.  ".
+                            "_Contributions are welcome._",
+                            $pollEmoji, $pollId
+                        ),
+                        [],
+                        30
+                    ));
                 }
 
                 // Check against the channel id, so we don't add proposals to foreign polls.
                 // fetchMessage handles this check for now, yet best add one later here for good measure
 
-                return $channel->fetchMessage($pollObject->messageId)
+                return $channel
+                    ->fetchMessage($pollObject->messageId)
                     ->otherwise($reject)
-                    ->then(function (Message $pollMessage) use ($resolve, $channel, $message, $name, $pollObject) {
+                    ->then(function (Message $pollMessage) use ($resolve, $reject, $channel, $message, $name, $pollObject) {
 
-                        printf("Got the poll message, adding the proposal…");
+                        printf("Got the poll message, adding the proposal…\n");
 
-                        $addition = $this->addProposal(
+                        $proposalAddition = $this->addProposal(
                             $message,
                             $pollMessage,
                             $name,
@@ -111,11 +124,21 @@ class CreateProposal extends PollCommand
                             $pollObject->amountOfGrades
                         );
 
-                        $addition->then(function (Message $proposalMessage) use ($resolve) {
-                            return $resolve($proposalMessage);
-                        });
-
-                        return $addition;
+                        return $proposalAddition->then(
+                            function (Message $proposalMessage) use ($resolve) {
+                                return $resolve($proposalMessage);
+                            },
+                            function ($error) use ($reject) {
+//                                $this->sendToast(
+//                                    $channel,
+//                                    $message,
+//                                    sprintf("The  ?."),
+//                                    [],
+//                                    10
+//                                );
+                                return $reject($error);
+                            }
+                        );
                     });
             }
         );
