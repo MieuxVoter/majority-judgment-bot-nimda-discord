@@ -43,6 +43,8 @@ class ResolvePoll extends PollCommand
             }
         }
 
+        // Perhaps this is unsafe, because we don't  call done() or return the promise,
+        // so what happens if it gets garbage collected ?    Or worse, if it does not ?
         $deleteMessagePromise = $message->delete(10);
 
         $pollIsValid = true;
@@ -131,32 +133,50 @@ class ResolvePoll extends PollCommand
 
                     $amountOfParticipants = 0;
                     $pollTally = [];
+                    $gradesEmotes = $this->gradesEmotes[$poll->amountOfGrades];
                     foreach ($proposalsMessages as $proposalsMessage) {
                         /** @var MessageReaction[] $reactions */
-//                        $reactions = $proposalsMessage->reactions;
-                        $reactions = array_filter($proposalsMessage->reactions->all(), function (MessageReaction $reaction) use ($poll) {
-                            return in_array($reaction->emoji, $this->gradesEmotes[$poll->amountOfGrades]);
-                        });
+                        $reactions = array_filter(
+                            $proposalsMessage->reactions->all(),
+                            function (MessageReaction $reaction) use ($poll, $gradesEmotes) {
+                                return in_array($reaction->emoji, $gradesEmotes);
+                            }
+                        );
+                        // Some reactions may have been deleted by admins, we'll set their tally to 0 below
+                        $reactionsByEmoji = [];
+                        foreach ($reactions as $reaction) {
+                            $reactionsByEmoji[(string) $reaction->emoji] = $reaction;
+                        }
+
                         $proposalTally = [];
                         $amountOfJudgesOfProposal = 0;
-                        foreach ($reactions as $reaction) {
+                        foreach ($gradesEmotes as $gradeEmote) {
+                            if ( ! isset($reactionsByEmoji[$gradeEmote])) {
+                                $proposalTally[] = 0;
+                                continue;
+                            }
+
+                            $reaction = $reactionsByEmoji[$gradeEmote];
+
                             // fixme: curate to ensure 1 user == 1 reaction
                             // This is tricky, since fetching all the users of all the reactions
                             // is going to take a long time (sequential, paginated requests).
-                            // It's also not going to scale well, compared to this naive usage of `count`.
+                            // It's also not going to scale well, compared to this naive usage of `->count`.
                             // We should probably offer both, this one first and then edit it with curated results?
+                            // Or make another command, or a command parameter?
 
                             $amountOfJudgesOfGrade = $reaction->count - 1;  // minus the bootstrap reaction of the bot
                             $amountOfJudgesOfProposal += $amountOfJudgesOfGrade;
 
                             $proposalTally[] = $amountOfJudgesOfGrade;
                         }
-                        // Same: getting the amount of judges from the max() is incorrect
+                        // Same: getting the amount of judges from the max() is incorrect but fast
                         $amountOfParticipants = max($amountOfParticipants, $amountOfJudgesOfProposal);
 
                         $pollTally[] = $proposalTally;
                     }
 
+                    // This deliberator is set to use the worst grade as the default grade.
                     $deliberator = new MajorityJudgmentDeliberator();
                     $result = $deliberator->deliberate(new TwoArraysPollTally(
                         $amountOfParticipants,
@@ -166,15 +186,12 @@ class ResolvePoll extends PollCommand
 
                     $leaderboard = $result->getProposalResults();
 
+                    // Cheat and use the OpenAPI to render the merit profile
                     $tallyString = join('_', array_map(function (ProposalResult $proposalResult){
                         return join('-', $proposalResult->getTally());
                     }, $leaderboard));
-
-                    $messageBody = sprintf(
-                        ""
-                    );
-
                     $imgUrl = sprintf("https://oas.mieuxvoter.fr/%s.png", $tallyString);
+                    // We could also use Miprem directly here @roipoussiere
 
                     $description = "";
                     foreach ($leaderboard as $proposalResult) {
@@ -185,7 +202,7 @@ class ResolvePoll extends PollCommand
                         );
                     }
 
-                    $me = new MessageEmbed([
+                    $embed = new MessageEmbed([
                         'title' => sprintf(
                             "⚖️ `%d` — %s",
                             $poll->id,
@@ -199,8 +216,13 @@ class ResolvePoll extends PollCommand
                         ],
                     ]);
 
-                    return $channel->send($messageBody, [
-                            'embed' => $me,
+                    $messageBody = sprintf(
+                        "" // perhaps we could add extra metadata in here, such as the amount of judges, etc.
+                    );
+
+                    return $channel
+                        ->send($messageBody, [
+                            'embed' => $embed,
 //                            'files' => [
 //                                ($imgUrl),
 //                            ],
