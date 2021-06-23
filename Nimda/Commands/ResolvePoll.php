@@ -31,6 +31,17 @@ class ResolvePoll extends PollCommand
         $channel = $message->channel;
         $actor = $message->author;
 
+//        print("ARGS\n");
+//        dump($args);
+
+//        dump($message->cleanContent);
+//        if ($message->mentions) {
+//            if ( ! empty($message->mentions->users->all())) {
+//                printf("Mentioned!\n");
+//                dump($message->mentions->users->first()->username);
+//            }
+//        }
+
         $pollId = $args->get('pollId');
         if (empty($pollId)) {
             printf("Guessing the poll identifier…\n");
@@ -46,6 +57,8 @@ class ResolvePoll extends PollCommand
         // Perhaps this is unsafe, because we don't  call done() or return the promise,
         // so what happens if it gets garbage collected ?    Or worse, if it does not ?
         $deleteMessagePromise = $message->delete(10);
+
+        $channel->startTyping();
 
         $pollIsValid = true;
 
@@ -238,10 +251,19 @@ class ResolvePoll extends PollCommand
             );
 
         $commandPromise->then(
-            null,
-            function ($error) {
+            function ($thing) use ($channel) {
+                $channel->stopTyping();
+                return $thing;
+            },
+            function ($error) use ($channel) {
+                $channel->stopTyping();
                 printf("ERROR with the !result command:\n");
                 dump($error);
+                return ($this->sendToast(
+                    $channel, null,
+                    "Ooooops!  An error occurred!  _Please contact the bot admin._",
+                    [], 20
+                ));
             }
         );
 
