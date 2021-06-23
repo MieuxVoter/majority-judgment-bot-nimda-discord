@@ -39,7 +39,7 @@ class CreateProposal extends PollCommand
 
         $pollId = $args->get('pollId');
         if (empty($pollId)) {
-            printf("Guessing the poll identifier…\n");
+            //printf("Guessing the poll identifier…\n");
             try {
                 $pollId = $this->getLatestPollIdOfChannel($channel);
             } catch (\Exception $exception) {

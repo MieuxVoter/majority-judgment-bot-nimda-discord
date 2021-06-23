@@ -257,10 +257,13 @@ abstract class PollCommand extends Command
         return new Promise(
             function ($resolve, $reject) use ($triggerMessage, $pollMessage, $proposalName, $pollId, $amountOfGrades) {
 
-                $emote = "📜";
+                $pollEmote = "⚖️";
+                $proposalEmote = "📜";
                 $messageBody = sprintf(
-                    "%s **%s**\n",
-                    $emote,
+                    "%s `%d`  %s **%s**\n",
+                    $pollEmote,
+                    $pollId,
+                    $proposalEmote,
                     $proposalName
                 );
 
