@@ -205,6 +205,11 @@ abstract class PollCommand extends Command
         });
     }
 
+    protected function removePoll(int $pollId)
+    {
+        DB::table(Database::POLLS)->delete($pollId);
+    }
+
     /**
      * The Promise yields an object, not an array.
      * Use $dbProposal->id for example, not $dbProposal['id']
@@ -305,10 +310,7 @@ abstract class PollCommand extends Command
                         printf("ERROR failed to send a new message for the proposal `%s'..\n", $proposalName);
                         dump($error);
                     })
-//                    ->then(function (Message $proposalMessage) use ($triggerMessage, $pollMessage, $proposalName, $amountOfGrades) {
-//                        return resolve($this->addProposalToDb($triggerMessage, $proposalMessage, $proposalName));
-//                    })
-                    ->then(function (Message $proposalMessage) use ($resolve, $reject, $triggerMessage, $pollMessage, $proposalName, $pollId, $amountOfGrades) {
+                    ->then(function (Message $proposalMessage) use ($resolve, $reject, $triggerMessage, $proposalName, $pollId, $amountOfGrades) {
 
                         $this->addProposalToDb($triggerMessage, $proposalMessage, $proposalName, $pollId)
                             ->otherwise(function ($error) {
@@ -319,7 +321,6 @@ abstract class PollCommand extends Command
                                 printf("Wrote proposal to database.\n");
                             }, $reject);
 
-//                        return $proposalMessage->client->addTimer(5, function () use ($resolve, $proposalMessage, $proposalName, $amountOfGrades) {
                         return $this
                             ->addGradingReactions($proposalMessage, $amountOfGrades)
                             ->then(
@@ -333,7 +334,6 @@ abstract class PollCommand extends Command
                                     return $reject($error);
                                 }
                             );
-//                        });
                     });
 
             }

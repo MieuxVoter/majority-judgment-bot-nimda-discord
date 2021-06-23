@@ -101,7 +101,8 @@ class CreateProposal extends PollCommand
                         $message,
                         sprintf(
                             "The poll %s `%d` could not be found.  ".
-                            "Either you misspelled it or we deleted the database, ".
+                            "Either you misspelled it, someone deleted the original message, ".
+                            "or we deleted the database, ".
                             "because we have no migration system in-place during alpha.  ".
                             "_Contributions are welcome._",
                             $this->getPollEmoji(), $pollId
@@ -117,12 +118,11 @@ class CreateProposal extends PollCommand
                 return $channel
                     ->fetchMessage($pollObject->messageId)
                     ->otherwise(function ($error) use ($resolve, $reject, $channel, $message, $pollId) {
-                        printf("WARN The message for poll %d has been deleted!\n", $pollId);
                         if (get_class($error) === DiscordAPIException::class) {
                             /** @var DiscordAPIException $error */
                             if ($error->getCode() === 10008) {  // Unknown Message
                                 printf("WARN The message for poll %d has been deleted!\n", $pollId);
-                                // todo(weak): remove the poll from the database, to clean it up?
+                                $this->removePoll($pollId);
                                 $channel->stopTyping();
                                 // We resolve because we handled the case and there's no reason to go through the command error catcher
                                 return $resolve($this->sendToast(
@@ -139,13 +139,13 @@ class CreateProposal extends PollCommand
                         }
                         return $reject($error);
                     })
-                    ->then(function (Message $pollMessage) use ($resolve, $reject, $channel, $name, $pollObject) {
+                    ->then(function (Message $pollMessage) use ($resolve, $reject, $message, $channel, $name, $pollObject) {
 
                         printf("Got the poll message, adding the proposal…\n");
 
                         $proposalAddition = $this->addProposal(
                             $channel,
-                            $pollMessage,
+                            $message,
                             $name,
                             $pollObject->id,
                             $pollObject->amountOfGrades
