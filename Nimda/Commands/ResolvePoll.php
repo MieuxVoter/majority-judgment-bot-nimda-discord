@@ -43,17 +43,36 @@ class ResolvePoll extends PollCommand
             }
         }
 
-        $channel = $message->channel;
+        $deleteMessagePromise = $message->delete(10);
 
-        $deleteMessagePromise = $message->delete();
+        $pollIsValid = true;
 
         try {
             $poll = $this->findPollById($pollId);
         } catch (\Exception $exception) {
-            printf("ERROR no poll found with id `%s' in channel `%s'.\n", $pollId, $channel->getId());
+            sprintf("ERROR findPollById threw:\n");
             dump($exception);
-            return reject();
+            $pollIsValid = false;
         }
+
+        if (empty($poll)) {
+            $pollIsValid = false;
+        }
+
+        if ( ! $pollIsValid) {
+            printf(
+                "%s no poll found with id `%s' in channel `%s'.\n",
+                $message->author->username, $pollId, $channel->getId()
+            );
+            return reject($this->sendToast(
+                $channel, $message,
+                "The poll was not found on this channel.  Try specifying its identifier with `!result ID`?",
+                [],
+                10
+            ));
+        }
+
+//        printf("");
 
         $dbProposalsPromise = $this->getDbProposalsForPoll($pollId);
         $commandPromise = $dbProposalsPromise
@@ -66,8 +85,7 @@ class ResolvePoll extends PollCommand
 //            )
             ->then(
                 function (Collection $dbProposals) use ($channel) {
-                    printf("Found proposals!\n");
-                    dump($dbProposals);
+                    printf("Found %d proposals in the database.\n", count($dbProposals));
 
                     return new Promise(
                         function ($resolve, $reject) use ($channel, $dbProposals) {
@@ -168,7 +186,11 @@ class ResolvePoll extends PollCommand
                     }
 
                     $me = new MessageEmbed([
-                        'title' => $poll->subject,
+                        'title' => sprintf(
+                            "⚖️ `%d` — %s",
+                            $poll->id,
+                            $poll->subject
+                        ),
                         'description' => $description,
                         'image' => [
                             'url' => $imgUrl,
