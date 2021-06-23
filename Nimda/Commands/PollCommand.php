@@ -225,7 +225,7 @@ abstract class PollCommand extends Command
             $result = DB::table(Database::PROPOSALS)->find($insertedId);
 
             if ($result) {
-                dump($result);
+                //dump($result);
 
                 return $resolve($result);
             }
@@ -376,6 +376,17 @@ abstract class PollCommand extends Command
                 });
 
         });
+    }
+
+    /**
+     * I am bot.  Am I $user ?
+     *
+     * @param User $user
+     * @return bool
+     */
+    protected function isMe(?User $user)
+    {
+        return !empty($user) && $user === $user->client->user;
     }
 
 }
