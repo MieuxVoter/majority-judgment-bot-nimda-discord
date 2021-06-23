@@ -28,6 +28,7 @@ class Database
 
     const POLLS = 'polls';
     const PROPOSALS = 'proposals';
+    const CHANNELS = 'channels';
 
     public static function installTables()
     {
@@ -59,5 +60,22 @@ class Database
                 $table->timestamp('updatedAt', 0)->nullable();  // not used yet
             });
         }
+
+        // Since we don't have migrations and I'm not sure we easily can,
+        // let's work on this a while before enabling it:
+//        if ( ! DB::schema()->hasTable(self::CHANNELS)) {
+//            DB::schema()->create(self::CHANNELS, function (Blueprint $table) {
+//                $table->increments('id');
+//                $table->string('discordId');  // guildId or something
+//                $table->string('joinerId')->nullable();
+//                $table->string('joinerUsername')->nullable();
+//                $table->string('pollCreationRoles')->default("");
+//                $table->string('proposalCreationRoles')->default("");
+//                $table->string('voteViaReactionRoles')->default("");
+//                $table->integer('usage')->default(0);  // metric? increments when using the bot?
+//
+//                $table->timestamp('joinedAt', 0)->nullable();
+//            });
+//        }
     }
 }
