@@ -2,6 +2,7 @@
 
 namespace Nimda\Commands;
 
+use CharlotteDunois\Yasmin\HTTP\DiscordAPIException;
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
 use React\Promise\Promise;
@@ -35,19 +36,9 @@ class CreateProposal extends PollCommand
         $channel = $message->channel;
         $actor = $message->author;
 
-        printf("CreateProposal triggered.\n");
+        $channel->startTyping();
 
-        $pollId = $args->get('pollId');
-        if (empty($pollId)) {
-            //printf("Guessing the poll identifier…\n");
-            try {
-                $pollId = $this->getLatestPollIdOfChannel($channel);
-            } catch (\Exception $exception) {
-                printf("ERROR failed to fetch the latest poll id of channel `%s'.\n", $channel);
-                dump($exception);
-                return reject();
-            }
-        }
+        printf("CreateProposal triggered.\n");
 
         $name = $args->get('name');
         $name = trim($name);
@@ -67,11 +58,25 @@ class CreateProposal extends PollCommand
             $message->delete(0, "command");
             $documentationShowed = $this->sendToast($channel, $message, $documentationContent, [], 60);
 
+            $channel->stopTyping();
             return reject($documentationShowed);
         }
-        // will perhaps fail with RTL languages
         $name = mb_strimwidth($name, 0, $this->config['proposalMaxLength'], "…");
         $name = mb_strtoupper($name);
+
+
+        $pollId = $args->get('pollId');
+        if (empty($pollId)) {
+            //printf("Guessing the poll identifier…\n");
+            try {
+                $pollId = $this->getLatestPollIdOfChannel($channel);
+            } catch (\Exception $exception) {
+                printf("ERROR failed to fetch the latest poll id of channel `%s'.\n", $channel);
+                dump($exception);
+                $channel->stopTyping();
+                return reject();
+            }
+        }
 
         printf(
             "[%s:%s] Add proposal `%s' to the poll #%d…\n",
@@ -90,7 +95,7 @@ class CreateProposal extends PollCommand
 
                 $pollObject = $this->findPollById($pollId);
                 if (empty($pollObject)) {
-                    $pollEmoji = "⚖️";
+                    $channel->stopTyping();
                     return $reject($this->sendToast(
                         $channel,
                         $message,
@@ -99,7 +104,7 @@ class CreateProposal extends PollCommand
                             "Either you misspelled it or we deleted the database, ".
                             "because we have no migration system in-place during alpha.  ".
                             "_Contributions are welcome._",
-                            $pollEmoji, $pollId
+                            $this->getPollEmoji(), $pollId
                         ),
                         [],
                         30
@@ -111,13 +116,35 @@ class CreateProposal extends PollCommand
 
                 return $channel
                     ->fetchMessage($pollObject->messageId)
-                    ->otherwise($reject)
-                    ->then(function (Message $pollMessage) use ($resolve, $reject, $channel, $message, $name, $pollObject) {
+                    ->otherwise(function ($error) use ($resolve, $reject, $channel, $message, $pollId) {
+                        printf("WARN The message for poll %d has been deleted!\n", $pollId);
+                        if (get_class($error) === DiscordAPIException::class) {
+                            /** @var DiscordAPIException $error */
+                            if ($error->getCode() === 10008) {  // Unknown Message
+                                printf("WARN The message for poll %d has been deleted!\n", $pollId);
+                                // todo(weak): remove the poll from the database, to clean it up?
+                                $channel->stopTyping();
+                                // We resolve because we handled the case and there's no reason to go through the command error catcher
+                                return $resolve($this->sendToast(
+                                    $channel,
+                                    $message,
+                                    sprintf(
+                                        "%s The poll %s `%d` was probably deleted by someone.",
+                                        $this->getErrorEmoji(), $this->getPollEmoji(), $pollId
+                                    ),
+                                    [],
+                                    20
+                                ));
+                            }
+                        }
+                        return $reject($error);
+                    })
+                    ->then(function (Message $pollMessage) use ($resolve, $reject, $channel, $name, $pollObject) {
 
                         printf("Got the poll message, adding the proposal…\n");
 
                         $proposalAddition = $this->addProposal(
-                            $message,
+                            $channel,
                             $pollMessage,
                             $name,
                             $pollObject->id,
@@ -143,15 +170,18 @@ class CreateProposal extends PollCommand
             }
         );
 
-        $commandPromise->then(
-            null,
-            function ($error) {
+        return $commandPromise->then(
+            function ($thing) use ($channel) {
+                $channel->stopTyping(true);
+                return $thing;
+            },
+            function ($error) use ($channel) {
+                $channel->stopTyping(true);
                 printf("ERROR with the !proposal command:\n");
                 dump($error);
+                return $error;
             }
         );
-
-        return $commandPromise;
     }
 
     public function isConfigured(): bool

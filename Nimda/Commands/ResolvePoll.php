@@ -79,6 +79,7 @@ class ResolvePoll extends PollCommand
                 "%s no poll found with id `%s' in channel `%s'.\n",
                 $message->author->username, $pollId, $channel->getId()
             );
+            $channel->stopTyping();
             return reject($this->sendToast(
                 $channel, $message,
                 "The poll was not found on this channel.  Try specifying its identifier with `!result ID`?",
@@ -86,8 +87,6 @@ class ResolvePoll extends PollCommand
                 10
             ));
         }
-
-//        printf("");
 
         $dbProposalsPromise = $this->getDbProposalsForPoll($pollId);
         $commandPromise = $dbProposalsPromise
@@ -255,12 +254,12 @@ class ResolvePoll extends PollCommand
                 $channel->stopTyping();
                 return $thing;
             },
-            function ($error) use ($channel) {
-                $channel->stopTyping();
+            function ($error) use ($channel, $message) {
                 printf("ERROR with the !result command:\n");
                 dump($error);
+                $channel->stopTyping();
                 return ($this->sendToast(
-                    $channel, null,
+                    $channel, $message,
                     "Ooooops!  An error occurred!  _Please contact the bot admin._",
                     [], 20
                 ));

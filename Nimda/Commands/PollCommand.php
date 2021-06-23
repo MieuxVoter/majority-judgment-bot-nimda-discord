@@ -40,6 +40,21 @@ abstract class PollCommand extends Command
         // If you add more, remember to clamp $amountOfGrades accordingly below
     ];
 
+    protected function getPollEmoji()
+    {
+        return "⚖️";
+    }
+
+    protected function getProposalEmoji()
+    {
+        return "⚖️";
+    }
+
+    protected function getErrorEmoji()
+    {
+        return "⛔️";
+    }
+
     /**
      * Fetch, in sequence, all the messages of $channel with the ids $messagesIds.
      * If a message is not found, null is added.
@@ -252,10 +267,21 @@ abstract class PollCommand extends Command
         );
     }
 
-    protected function addProposal(?Message $triggerMessage, Message $pollMessage, string $proposalName, int $pollId, int $amountOfGrades) : PromiseInterface
+    /**
+     * High-level method to add a proposal.
+     * Used by the command !proposal and by presets.
+     *
+     * @param TextChannelInterface $channel
+     * @param Message|null $triggerMessage
+     * @param string $proposalName
+     * @param int $pollId
+     * @param int $amountOfGrades
+     * @return PromiseInterface
+     */
+    protected function addProposal(TextChannelInterface $channel, ?Message $triggerMessage, string $proposalName, int $pollId, int $amountOfGrades) : PromiseInterface
     {
         return new Promise(
-            function ($resolve, $reject) use ($triggerMessage, $pollMessage, $proposalName, $pollId, $amountOfGrades) {
+            function ($resolve, $reject) use ($channel, $triggerMessage, $proposalName, $pollId, $amountOfGrades) {
 
                 $pollEmote = "⚖️";
                 $proposalEmote = "📜";
@@ -273,8 +299,8 @@ abstract class PollCommand extends Command
                     ]
                 ];
 
-                return $pollMessage
-                    ->channel->send('', $options)
+                return $channel
+                    ->send('', $options)
                     ->otherwise(function ($error) use ($proposalName) {
                         printf("ERROR failed to send a new message for the proposal `%s'..\n", $proposalName);
                         dump($error);
