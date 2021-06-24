@@ -7,6 +7,7 @@ use Nimda\Configuration\Discord;
 use Nimda\Core\CommandContainer;
 use Nimda\Core\Conversation;
 use Nimda\Core\Database;
+use Nimda\Core\DatabaseDoctrine;
 use Nimda\Core\EventContainer;
 use Nimda\Core\TimerContainer;
 use React\EventLoop\Factory;
@@ -51,7 +52,9 @@ final class Nimda
         $this->startupCheck();
         $this->loop = Factory::create();
         $this->client = new Client(Discord::config()['options'], $this->loop);
+
         Database::boot();
+        DatabaseDoctrine::boot();
 
         $this->commands = new CommandContainer();
         $this->events = new EventContainer($this->client);
