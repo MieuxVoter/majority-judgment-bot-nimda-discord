@@ -257,11 +257,32 @@ class ResolvePoll extends PollCommand
             function ($error) use ($channel, $message) {
                 printf("ERROR with the !result command:\n");
                 dump($error);
+                $insecureButHandy = "";
+                if ($this->shouldShowDebug() && ($error instanceof \Throwable)) {
+                    $insecureButHandy = $error->getMessage();
+                }
                 $channel->stopTyping();
                 return ($this->sendToast(
                     $channel, $message,
-                    "Ooooops!  An error occurred!  _Please contact the bot admin._",
-                    [], 20
+                    "😱 Ooooops!  An error occurred!  _Please contact the 🤖 bot admin._ \n ".
+                    "You may also report an issue.\n".
+                    "https://github.com/MieuxVoter/majority-judgment-bot-nimda-discord/issues\n".
+                    "\n".
+                    (
+                        ($insecureButHandy) ? (
+                            "Please provide the following data:\n".
+                            sprintf("```\n%s\n```\n", $insecureButHandy).
+                            ""
+                        ) : "_Tip: run the bot with `APP_ENV=dev` to see more information about the error here._\n"
+                    ).
+                    "",
+                    [
+                        // Trying to bypass the unwarranted Notice
+                        // PHP Notice:  Undefined index: url in vendor/laravel-discord/yasmin/src/Models/MessageEmbed.php on line 173
+//                        'embed' => [
+//                            'url' => "https://github.com/MieuxVoter/majority-judgment-bot-nimda-discord/issues",
+//                        ],
+                    ], 300
                 ));
             }
         );

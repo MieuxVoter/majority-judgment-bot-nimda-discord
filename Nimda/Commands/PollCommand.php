@@ -263,7 +263,7 @@ abstract class PollCommand extends Command
                     ->where('pollId', '=', $pollId)
                     ->limit(32) // fixme: hard limit to move to ENV and $config
                 ;
-//                dump($resultsQuery->toSql());
+                //dump($resultsQuery->toSql());
 
                 $results = $resultsQuery->get();
 
@@ -413,6 +413,11 @@ abstract class PollCommand extends Command
     protected function isMe(?User $user)
     {
         return !empty($user) && $user === $user->client->user;
+    }
+
+    protected function shouldShowDebug()
+    {
+        return getenv("APP_ENV") !== "prod";
     }
 
 }
