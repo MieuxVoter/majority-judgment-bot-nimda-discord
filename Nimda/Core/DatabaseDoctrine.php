@@ -10,7 +10,7 @@ use Doctrine\ORM\EntityManager;
 
 class DatabaseDoctrine
 {
-    public static $entityManager;
+    public static EntityManager $entityManager;
 
     /**
      * @throws ORMException
@@ -37,5 +37,9 @@ class DatabaseDoctrine
         );
 
         self::$entityManager = EntityManager::create($conn, $config);
+    }
+
+    public static function repo(string $class) {
+        return self::$entityManager->getRepository($class);
     }
 }

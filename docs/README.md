@@ -25,3 +25,19 @@ This bot must be run in CLI: `php start.php`
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the 
 [tags on this repository](https://github.com/JABirchall/NimdaDiscord/tags). 
 
+
+## Database
+
+### Laravel Stuff
+
+Old, deprecated.  Still here for now, but let's remove it.
+Instead, use Doctrine.
+
+### Doctrine
+
+Update the database structure from the PHP Entities:
+
+    vendor/bin/doctrine orm:schema-tool:update --force --dump-sql
+
+> Only handles additions and deletions, not proper migrations.
+> `vendor/bin/doctrine-migrations` neeeeds additional configuration.  Help us! :)

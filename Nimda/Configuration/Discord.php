@@ -64,6 +64,7 @@ class Discord
              * Public commands created by the community. The Nimda Team are not responsible for their functionality.
              */
             'public' => [
+                \Nimda\Commands\Join::class,
                 \Nimda\Commands\CreatePoll::class,
                 \Nimda\Commands\CreateProposal::class,
                 \Nimda\Commands\ResolvePoll::class,
