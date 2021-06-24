@@ -207,8 +207,15 @@ class ResolvePoll extends PollCommand
 
                     $description = "";
                     foreach ($leaderboard as $proposalResult) {
+                        switch ($proposalResult->getRank()) {
+                            case 1:
+                                $description .= "🏆 ";  // victory cup
+                                break;
+                            default:
+                                $description .= "🏅 ";  // participation award :)
+                        }
                         $description .= sprintf(
-                            "`%d` ➡️ %s \n",
+                            "**`%d`** ➡️ %s \n",
                             $proposalResult->getRank(),
                             $proposalResult->getProposal()->name
                         );
@@ -216,7 +223,7 @@ class ResolvePoll extends PollCommand
 
                     $embed = new MessageEmbed([
                         'title' => sprintf(
-                            "⚖️ `%d` — %s",
+                            "⚖️ `#%d` — %s",
                             $poll->id,
                             $poll->subject
                         ),
