@@ -1,15 +1,16 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Nimda\Commands;
 
-use CharlotteDunois\Yasmin\HTTP\Endpoints\Channel;
 use CharlotteDunois\Yasmin\Interfaces\ChannelInterface;
 use CharlotteDunois\Yasmin\Interfaces\TextChannelInterface;
 use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\User;
 use Nimda\Core\Command;
 use Nimda\Core\Database;
+use Nimda\Core\DatabaseDoctrine;
 use Nimda\DB;
+use Nimda\Entity\Channel;
 use React\Promise\ExtendedPromiseInterface;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -24,10 +25,19 @@ use function React\Promise\resolve;
  */
 abstract class PollCommand extends Command
 {
+    #   _____             __ _
+    #  / ____|           / _(_)
+    # | |     ___  _ __ | |_ _  __ _
+    # | |    / _ \| '_ \|  _| |/ _` |
+    # | |___| (_) | | | | | | | (_| |
+    #  \_____\___/|_| |_|_| |_|\__, |
+    #                           __/ |
+    #                          |___/
+
     // From worst to best, for each grading size. Let's hope 10 grades is enough.
     // Would also love literal grades like "Reject", "Passable", etc.  Gotta do what we can.
     // The numbers are unicode, not the usual ASCII.
-    protected $gradesEmotes = [
+    protected array $gradesEmotes = [
         2 => ["👎", "👍"],
         3 => ["👎", "👊", "👍"],
         4 => ["🤬", "😐", "🙂", "😍"],
@@ -40,20 +50,29 @@ abstract class PollCommand extends Command
         // If you add more, remember to clamp $amountOfGrades accordingly below
     ];
 
-    protected function getPollEmoji()
+    protected function getPollEmoji() : string
     {
         return "⚖️";
     }
 
-    protected function getProposalEmoji()
+    protected function getProposalEmoji() : string
     {
         return "⚖️";
     }
 
-    protected function getErrorEmoji()
+    protected function getErrorEmoji() : string
     {
         return "⛔️";
     }
+
+    #  _____  _                       _    ____                        _
+    # |  __ \(_)                     | |  / __ \                      (_)
+    # | |  | |_ ___  ___ ___  _ __ __| | | |  | |_   _  ___ _ __ _   _ _ _ __   __ _
+    # | |  | | / __|/ __/ _ \| '__/ _` | | |  | | | | |/ _ \ '__| | | | | '_ \ / _` |
+    # | |__| | \__ \ (_| (_) | | | (_| | | |__| | |_| |  __/ |  | |_| | | | | | (_| |
+    # |_____/|_|___/\___\___/|_|  \__,_|  \___\_\\__,_|\___|_|   \__, |_|_| |_|\__, |
+    #                                                             __/ |         __/ |
+    #                                                            |___/         |___/
 
     /**
      * Fetch, in sequence, all the messages of $channel with the ids $messagesIds.
@@ -123,6 +142,15 @@ abstract class PollCommand extends Command
             }
         );
     }
+
+    #  _____        _        _                       __     _     ___
+    # |  __ \      | |      | |                     / /    | |   | \ \
+    # | |  | | __ _| |_ __ _| |__   __ _ ___  ___  | | ___ | | __| || |
+    # | |  | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ | |/ _ \| |/ _` || |
+    # | |__| | (_| | || (_| | |_) | (_| \__ \  __/ | | (_) | | (_| || |
+    # |_____/ \__,_|\__\__,_|_.__/ \__,_|___/\___| | |\___/|_|\__,_|| |
+    #                                               \_\            /_/
+    #
 
     /**
      * @param int $pollId
@@ -272,6 +300,70 @@ abstract class PollCommand extends Command
         );
     }
 
+    #  _____        _        _
+    # |  __ \      | |      | |
+    # | |  | | __ _| |_ __ _| |__   __ _ ___  ___
+    # | |  | |/ _` | __/ _` | '_ \ / _` / __|/ _ \
+    # | |__| | (_| | || (_| | |_) | (_| \__ \  __/
+    # |_____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
+    #
+    #
+
+    protected function findChannel(?TextChannelInterface $channel) : ?Channel
+    {
+        if (null === $channel) {
+            return null;
+        }
+
+        /** @var Channel $dbChannel */
+        $dbChannel = DatabaseDoctrine::repo(Channel::class)->findOneBy([
+            'discordId' => $channel->getId(),
+        ]);
+
+        return $dbChannel;
+    }
+
+    protected function isChannelJoined(?TextChannelInterface $channel) : bool
+    {
+        if (null === $channel) {
+            return false;
+        }
+
+        $dbChannel = $this->findChannel($channel);
+
+        if (null === $dbChannel) {
+            return false;
+        }
+
+//        if ($dbChannel->isBanned()) {
+//            return false;
+//        }
+
+        return true;
+    }
+
+    #  _    _ _       _       _                    _
+    # | |  | (_)     | |     | |                  | |
+    # | |__| |_  __ _| |__   | |     _____   _____| |
+    # |  __  | |/ _` | '_ \  | |    / _ \ \ / / _ \ |
+    # | |  | | | (_| | | | | | |___|  __/\ V /  __/ |
+    # |_|  |_|_|\__, |_| |_| |______\___| \_/ \___|_|
+    #            __/ |
+    #           |___/
+
+    protected function remindThatJoinIsRequired(Message $triggerMessage)
+    {
+        return $this->sendToast(
+            $triggerMessage->channel,
+            $triggerMessage,
+            "Are you trying to give me a command?\n".
+            "If so, type `!join` to let me in this channel.\n".
+            "",
+            [],
+            10
+        );
+    }
+
     /**
      * High-level method to add a proposal.
      * Used by the command !proposal and by presets.
@@ -403,6 +495,14 @@ abstract class PollCommand extends Command
 
         });
     }
+
+    #  _    _ _   _ _
+    # | |  | | | (_) |
+    # | |  | | |_ _| |___
+    # | |  | | __| | / __|
+    # | |__| | |_| | \__ \
+    #  \____/ \__|_|_|___/
+    #
 
     /**
      * I am bot.  Am I $user ?

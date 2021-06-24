@@ -3,16 +3,10 @@
 namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
-use Doctrine\ORM\Query\AST\ConditionalExpression;
-use Doctrine\ORM\Query\AST\WhereClause;
 use Illuminate\Support\Collection;
 use Nimda\Core\DatabaseDoctrine;
 use Nimda\Entity\Channel;
 use React\Promise\PromiseInterface;
-use function Doctrine\ORM\QueryBuilder;
-use function React\Promise\all;
-use function React\Promise\reject;
-use function React\Promise\resolve;
 
 /**
  * Enables the bot on the channel.

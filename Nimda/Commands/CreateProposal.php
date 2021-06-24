@@ -36,6 +36,11 @@ class CreateProposal extends PollCommand
         $channel = $message->channel;
         $actor = $message->author;
 
+        if ( ! $this->isChannelJoined($channel)) {
+            printf("Trying to use !proposal on a non-joined channel.\n");
+            return reject();
+        }
+
         $channel->startTyping();
 
         printf("CreateProposal triggered.\n");

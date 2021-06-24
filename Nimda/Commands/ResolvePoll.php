@@ -31,6 +31,11 @@ class ResolvePoll extends PollCommand
         $channel = $message->channel;
         $actor = $message->author;
 
+        if ( ! $this->isChannelJoined($channel)) {
+            printf("Trying to use !result on a non-joined channel.\n");
+            return reject();
+        }
+
 //        print("ARGS\n");
 //        dump($args);
 

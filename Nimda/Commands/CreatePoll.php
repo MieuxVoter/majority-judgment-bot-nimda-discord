@@ -30,10 +30,14 @@ class CreatePoll extends PollCommand
     {
         $defaultAmountOfGrades = 5;
         $minimumAmountOfGrades = 2;
-        $maximumAmountOfGrades = 10;
+        $maximumAmountOfGrades = 10; // if you change this, change $gradesEmotes in PollCommand as well
 
         $channel = $message->channel;
         $actor = $message->author;
+
+        if ( ! $this->isChannelJoined($channel)) {
+            return $this->remindThatJoinIsRequired($message);
+        }
 
         $amountOfGrades = $args->get('grades');
         if (empty($amountOfGrades)) {
