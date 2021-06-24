@@ -93,12 +93,4 @@ class Join extends PollCommand
         );
     }
 
-    public function isConfigured(): bool
-    {
-        return (
-            parent::isConfigured()
-        );
-    }
-
-
 }
