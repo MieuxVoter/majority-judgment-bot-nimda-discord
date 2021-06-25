@@ -12,16 +12,12 @@ use function React\Promise\reject;
 /**
  *
  * !poll What do you want from life?
- *
- *
  * !poll 5 What do you want from life?
- *
- *
  *
  * Class CreatePoll
  * @package Nimda\Core\Commands
  */
-class CreatePoll extends PollCommand
+final class CreatePoll extends PollCommand
 {
 
     /**

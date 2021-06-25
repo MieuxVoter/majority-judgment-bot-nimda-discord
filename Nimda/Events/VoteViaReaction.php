@@ -23,7 +23,7 @@ use Nimda\Core\Event;
  * Class VoteViaReaction
  * @package Nimda\Events
  */
-class VoteViaReaction extends Event
+final class VoteViaReaction extends Event
 {
     function messageReactionAdd(MessageReaction $reaction, User $user)
     {

@@ -20,7 +20,7 @@ class Database
         // Create a simple "default" Doctrine ORM configuration for Annotations
         $isDevMode = true;  // → Caching is done in RAM (ArrayCache)
         $proxyDir = null;  // Use system tmp
-        $cache = null;
+        $cache = null;    // Hopefully overruled by isdevMode
         $useSimpleAnnotationReader = false;
         $config = Setup::createAnnotationMetadataConfiguration(
             array(NIMDA_PATH),
@@ -30,7 +30,6 @@ class Database
             $useSimpleAnnotationReader
         );
 
-        // database configuration parameters
         $conn = array(
             'driver' => 'pdo_'.getenv('DATABASE_DRIVER'),
         );
