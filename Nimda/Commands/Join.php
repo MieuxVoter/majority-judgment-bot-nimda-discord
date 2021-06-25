@@ -30,6 +30,20 @@ class Join extends PollCommand
 
         printf("!join\n");
 
+        if ( ! $this->isMentioningMe($message)) {
+            $channel->stopTyping();
+            return $this->sendToast(
+                $channel, $message,
+                sprintf(
+                    "If you want me to join this channel, " .
+                    "please mention me as well, like so: " .
+                    "`!join @Majority Judgment`"
+                ),
+                [],
+                10
+            );
+        }
+
         /** @var Channel $dbChannel */
         $dbChannel = DatabaseDoctrine::repo(Channel::class)->findOneBy(
             ['discordId' => $channel->getId()]

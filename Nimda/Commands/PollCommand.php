@@ -510,12 +510,17 @@ abstract class PollCommand extends Command
      * @param User $user
      * @return bool
      */
-    protected function isMe(?User $user)
+    protected function isMe(?User $user) : bool
     {
         return !empty($user) && $user === $user->client->user;
     }
 
-    protected function shouldShowDebug()
+    protected function isMentioningMe(Message $message) : bool
+    {
+        return in_array($message->client->user, $message->mentions->users->all());
+    }
+
+    protected function shouldShowDebug() : bool
     {
         return getenv("APP_ENV") !== "prod";
     }
