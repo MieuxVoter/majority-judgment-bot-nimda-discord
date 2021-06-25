@@ -12,15 +12,12 @@ use Doctrine\ORM\ORMException;
 use Exception;
 use Nimda\Core\Command;
 use Nimda\Core\Database;
-use Nimda\Core\DatabaseDoctrine;
-use Nimda\DB;
 use Nimda\Entity\Channel;
 use Nimda\Entity\Poll;
 use Nimda\Entity\Proposal;
 use React\Promise\ExtendedPromiseInterface;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
-use Symfony\Component\VarDumper\Cloner\Data;
 use function React\Promise\all;
 use function React\Promise\resolve;
 
@@ -166,7 +163,7 @@ abstract class PollCommand extends Command
     protected function findPollById(int $pollId) : ?Poll
     {
         /** @var ?Poll $poll */
-        $poll = DatabaseDoctrine::repo(Poll::class)->find($pollId);
+        $poll = Database::repo(Poll::class)->find($pollId);
 
         if (empty($poll)) {
             return null;
@@ -188,7 +185,7 @@ abstract class PollCommand extends Command
     {
         $result = null;
         try {
-            $result = DatabaseDoctrine::repo(Poll::class)
+            $result = Database::repo(Poll::class)
                 ->createQueryBuilder('p')
                 ->select('p.id')
                 ->where('p.channelVendorId = :channelVendorId')
@@ -234,8 +231,8 @@ abstract class PollCommand extends Command
             ;
 
             try {
-                DatabaseDoctrine::$entityManager->persist($poll);
-                DatabaseDoctrine::$entityManager->flush();
+                Database::$entityManager->persist($poll);
+                Database::$entityManager->flush();
             } catch (Exception $exception) {
                 return $reject($exception);
             }
@@ -258,7 +255,7 @@ abstract class PollCommand extends Command
             return;
         }
 
-        DatabaseDoctrine::$entityManager->remove($poll);
+        Database::$entityManager->remove($poll);
     }
 
     /**
@@ -288,8 +285,8 @@ abstract class PollCommand extends Command
                 ;
 
                 try {
-                    DatabaseDoctrine::$entityManager->persist($proposal);
-                    DatabaseDoctrine::$entityManager->flush();
+                    Database::$entityManager->persist($proposal);
+                    Database::$entityManager->flush();
                 } catch (Exception $exception) {
                     return $reject($exception);
                 }
@@ -324,7 +321,7 @@ abstract class PollCommand extends Command
         }
 
         /** @var Channel $dbChannel */
-        $dbChannel = DatabaseDoctrine::repo(Channel::class)->findOneBy([
+        $dbChannel = Database::repo(Channel::class)->findOneBy([
             'discordId' => $channel->getId(),
         ]);
 
@@ -379,8 +376,7 @@ abstract class PollCommand extends Command
      * @param TextChannelInterface $channel
      * @param Message|null $triggerMessage
      * @param string $proposalName
-     * @param int $pollId
-     * @param int $amountOfGrades
+     * @param Poll $poll
      * @return PromiseInterface
      */
     protected function addProposal(TextChannelInterface $channel, ?Message $triggerMessage, string $proposalName, Poll $poll) : PromiseInterface
@@ -417,8 +413,11 @@ abstract class PollCommand extends Command
 //                                dump($error);
 //                                return $reject($error);
 //                            })
-                            ->done(function ($dbProposal) {
-                                printf("Wrote proposal to database.\n");
+                            ->done(function (Proposal $dbProposal) {
+                                printf(
+                                    "Wrote proposal #%d `%s' to database.\n",
+                                    $dbProposal->getId(), $dbProposal->getName()
+                                );
                             }, $reject);
 
                         return $this

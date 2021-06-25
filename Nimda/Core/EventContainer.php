@@ -19,7 +19,7 @@ final class EventContainer
     /**
      * @var Client
      */
-    private $client;
+    private Client $client;
 
     /**
      * EventContainer constructor.

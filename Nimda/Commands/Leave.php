@@ -4,7 +4,7 @@ namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
-use Nimda\Core\DatabaseDoctrine;
+use Nimda\Core\Database;
 use Nimda\Entity\Channel;
 use React\Promise\PromiseInterface;
 
@@ -31,7 +31,7 @@ final class Leave extends PollCommand
         printf("!leave\n");
 
         /** @var Channel $dbChannel */
-        $dbChannel = DatabaseDoctrine::repo(Channel::class)->findOneBy(
+        $dbChannel = Database::repo(Channel::class)->findOneBy(
             ['discordId' => $channel->getId()]
         );
 
@@ -65,8 +65,8 @@ final class Leave extends PollCommand
         }
 
         try {
-            DatabaseDoctrine::$entityManager->remove($dbChannel);
-            DatabaseDoctrine::$entityManager->flush();
+            Database::$entityManager->remove($dbChannel);
+            Database::$entityManager->flush();
         } catch (\Exception $exception) {
             $channel->stopTyping();
             return $this->sendToast(

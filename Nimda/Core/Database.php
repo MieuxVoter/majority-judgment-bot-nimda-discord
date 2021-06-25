@@ -2,80 +2,55 @@
 
 namespace Nimda\Core;
 
-use Illuminate\Database\Capsule\Manager;
-use Illuminate\Database\Schema\Blueprint;
+use Doctrine\ORM\ORMException;
 use Nimda\Configuration\Database as Config;
-use Nimda\DB;
+use Doctrine\ORM\Tools\Setup;
+use Doctrine\ORM\EntityManager;
+
 
 class Database
 {
-    public static $manager;
+    public static EntityManager $entityManager;
 
+    /**
+     * @throws ORMException
+     */
     public static function boot(): void
     {
-        printf("Booting database driver - ");
-        self::$manager = new Manager;
-        self::$manager->addConnection(Config::$config['connections'][Config::$config['default']]);
-        self::$manager->setAsGlobal();
-        self::$manager->bootEloquent();
+        // Create a simple "default" Doctrine ORM configuration for Annotations
+        $isDevMode = true;  // → Caching is done in RAM (ArrayCache)
+        $proxyDir = null;  // Use system tmp
+        $cache = null;
+        $useSimpleAnnotationReader = false;
+        $config = Setup::createAnnotationMetadataConfiguration(
+            array(NIMDA_PATH),
+            $isDevMode,
+            $proxyDir,
+            $cache,
+            $useSimpleAnnotationReader
+        );
 
-        self::installTables();
+        // database configuration parameters
+        $conn = array(
+            'driver' => 'pdo_'.getenv('DATABASE_DRIVER'),
+        );
 
-        $version = (Config::$config['default'] === 'sqlite') ? "sqlite_version()" : "version()";
+        self::addFromEnv($conn, 'path', 'DATABASE_PATH');
+        self::addFromEnv($conn, 'charset', 'DATABASE_CHARSET');
+        self::addFromEnv($conn, 'user', 'DATABASE_USER');
+        self::addFromEnv($conn, 'password', 'DATABASE_PASS');
 
-        printf("%s version %s booted \n",Config::$config['default'], DB::select("select {$version} as version")[0]->version);
+        self::$entityManager = EntityManager::create($conn, $config);
     }
 
-    const POLLS = 'polls';
-    const PROPOSALS = 'proposals';
-    const CHANNELS = 'channels';
+    public static function repo(string $class) {
+        return self::$entityManager->getRepository($class);
+    }
 
-    public static function installTables()
-    {
-        if ( ! DB::schema()->hasTable(self::POLLS)) {
-            DB::schema()->create(self::POLLS, function (Blueprint $table) {
-                $table->increments('id');
-                $table->string('authorId')->nullable();
-                $table->string('channelId');
-                $table->string('messageId');
-                $table->string('triggerMessageId')->nullable();
-                $table->string('subject'); // cache? could be read from message?
-                $table->string('amountOfGrades');
-                $table->timestamp('createdAt', 0)->nullable();
-                $table->timestamp('updatedAt', 0)->nullable(); // not used yet
-            });
+    public static function addFromEnv(array &$conn, string $connKey, string $envKey) {
+        $value = getenv($envKey);
+        if (false !== $value) {
+            $conn[$connKey] = $value;
         }
-
-        if ( ! DB::schema()->hasTable(self::PROPOSALS)) {
-            DB::schema()->create(self::PROPOSALS, function (Blueprint $table) {
-                $table->increments('id');
-                $table->integer('pollId');
-//                $table->foreign('pollId', 'poll'); // hmmm… help!
-                $table->string('channelId'); // could be read through poll ; cached value
-                $table->string('authorId')->nullable();
-                $table->string('messageId');
-                $table->string('triggerMessageId')->nullable();
-                $table->string('name');
-                $table->timestamp('createdAt', 0)->nullable();
-                $table->timestamp('updatedAt', 0)->nullable();  // not used yet
-            });
-        }
-
-        // Since we don't have migrations and I'm not sure we easily can,
-        // let's work on this a while before enabling it:
-//        if ( ! DB::schema()->hasTable(self::CHANNELS)) {
-//            DB::schema()->create(self::CHANNELS, function (Blueprint $table) {
-//                $table->increments('id');
-//                $table->string('discordId');  // guildId or something
-//                $table->string('joinerId')->nullable();
-//                $table->string('joinerUsername')->nullable();
-//                $table->string('pollCreationRoles')->default("");
-//                $table->string('proposalCreationRoles')->default("");
-//                $table->string('voteViaReactionRoles')->default("");
-//                $table->integer('usage')->default(0);  // metric? increments when using the bot?
-//
-//                $table->timestamp('joinedAt', 0)->nullable();
-//            });
-//        }
     }
 }

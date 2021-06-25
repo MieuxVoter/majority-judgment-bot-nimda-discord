@@ -16,8 +16,9 @@
   ],
   "require": {
     "php": "^7.4",
-    "ext-mbstring": "^7.1",
-    "ext-pdo": "^7.1",
+    "ext-mbstring": "^7.4",
+    "ext-pdo": "^7.4",
+    "ext-posix": "^7.4",
     "doctrine/cache": "^2.0",
     "doctrine/orm": "^2.9",
     "illuminate/database": "^5.7",

@@ -4,7 +4,7 @@ namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
-use Nimda\Core\DatabaseDoctrine;
+use Nimda\Core\Database;
 use Nimda\Entity\Channel;
 use React\Promise\PromiseInterface;
 
@@ -45,7 +45,7 @@ final class Join extends PollCommand
         }
 
         /** @var Channel $dbChannel */
-        $dbChannel = DatabaseDoctrine::repo(Channel::class)->findOneBy(
+        $dbChannel = Database::repo(Channel::class)->findOneBy(
             ['discordId' => $channel->getId()]
         );
 
@@ -72,8 +72,8 @@ final class Join extends PollCommand
 //        $dbChannel->setName(); // How do | can we get the channel's name?
 
         try {
-            DatabaseDoctrine::$entityManager->persist($dbChannel);
-            DatabaseDoctrine::$entityManager->flush();
+            Database::$entityManager->persist($dbChannel);
+            Database::$entityManager->flush();
         } catch (\Exception $exception) {
             $channel->stopTyping();
             return $this->sendToast(
