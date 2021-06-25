@@ -147,13 +147,13 @@ abstract class PollCommand extends Command
         );
     }
 
-    #  _____        _        _                       __     _     ___
-    # |  __ \      | |      | |                     / /    | |   | \ \
-    # | |  | | __ _| |_ __ _| |__   __ _ ___  ___  | | ___ | | __| || |
-    # | |  | |/ _` | __/ _` | '_ \ / _` / __|/ _ \ | |/ _ \| |/ _` || |
-    # | |__| | (_| | || (_| | |_) | (_| \__ \  __/ | | (_) | | (_| || |
-    # |_____/ \__,_|\__\__,_|_.__/ \__,_|___/\___| | |\___/|_|\__,_|| |
-    #                                               \_\            /_/
+    #  _____        _        _
+    # |  __ \      | |      | |
+    # | |  | | __ _| |_ __ _| |__   __ _ ___  ___
+    # | |  | |/ _` | __/ _` | '_ \ / _` / __|/ _ \
+    # | |__| | (_| | || (_| | |_) | (_| \__ \  __/
+    # |_____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
+    #
     #
 
     /**
@@ -249,7 +249,7 @@ abstract class PollCommand extends Command
      * @param Poll|null $poll
      * @throws ORMException
      */
-    protected function removePoll(?Poll $poll)
+    protected function removePollFromDb(?Poll $poll)
     {
         if (empty($poll)) {
             return;
@@ -305,16 +305,7 @@ abstract class PollCommand extends Command
         );
     }
 
-    #  _____        _        _
-    # |  __ \      | |      | |
-    # | |  | | __ _| |_ __ _| |__   __ _ ___  ___
-    # | |  | |/ _` | __/ _` | '_ \ / _` / __|/ _ \
-    # | |__| | (_| | || (_| | |_) | (_| \__ \  __/
-    # |_____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
-    #
-    #
-
-    protected function findChannel(?TextChannelInterface $channel) : ?Channel
+    protected function findDbChannel(?TextChannelInterface $channel) : ?Channel
     {
         if (null === $channel) {
             return null;
@@ -334,7 +325,7 @@ abstract class PollCommand extends Command
             return false;
         }
 
-        $dbChannel = $this->findChannel($channel);
+        $dbChannel = $this->findDbChannel($channel);
 
         if (null === $dbChannel) {
             return false;

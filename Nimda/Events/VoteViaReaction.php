@@ -7,7 +7,6 @@ namespace Nimda\Events;
 use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\MessageReaction;
 use CharlotteDunois\Yasmin\Models\User;
-use Nimda\Configuration\Discord;
 use Nimda\Core\Event;
 
 

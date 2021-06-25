@@ -128,7 +128,7 @@ class CreateProposal extends PollCommand
                             /** @var DiscordAPIException $error */
                             if ($error->getCode() === 10008) {  // Unknown Message
                                 printf("WARN The message for poll %d has been deleted!\n", $pollId);
-                                $this->removePoll($pollObject);
+                                $this->removePollFromDb($pollObject);
                                 $channel->stopTyping();
                                 // We resolve because we handled the case and there's no reason to go through the command error catcher
                                 return $resolve($this->sendToast(

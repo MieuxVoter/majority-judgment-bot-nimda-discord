@@ -92,8 +92,8 @@ final class CreatePoll extends PollCommand
             ]
         ];
 
-        $commandPromise = $message
-            ->channel->send("", $options)
+        $commandPromise = $channel
+            ->send("", $options)
             ->then(function (Message $pollMessage) use ($args, $message, $subject, $amountOfGrades) {
 
                 $addedPoll = $this->addPollToDb($message, $pollMessage, $subject, $amountOfGrades);
@@ -123,6 +123,8 @@ final class CreatePoll extends PollCommand
                                 ->otherwise(function ($error) {
                                     printf("ERROR editing the poll to add its ID.\n");
                                     dump($error);
+
+                                    return $error;
                                 })
                                 ->then(function (Message $editedPollMessage) use ($message, $pollId, $amountOfGrades) {
                                     printf("Done editing the poll message to add the poll ID.\n");

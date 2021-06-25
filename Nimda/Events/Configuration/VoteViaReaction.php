@@ -4,7 +4,7 @@ namespace Nimda\Events\Configuration;
 
 final class VoteViaReaction
 {
-    public static $config = [
+    public static array $config = [
         'trigger' => [
             'events' => [
                 'messageReactionAdd',
