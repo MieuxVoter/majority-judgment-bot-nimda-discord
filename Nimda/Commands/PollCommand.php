@@ -6,14 +6,21 @@ use CharlotteDunois\Yasmin\Interfaces\ChannelInterface;
 use CharlotteDunois\Yasmin\Interfaces\TextChannelInterface;
 use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\User;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
+use Doctrine\ORM\ORMException;
+use Exception;
 use Nimda\Core\Command;
 use Nimda\Core\Database;
 use Nimda\Core\DatabaseDoctrine;
 use Nimda\DB;
 use Nimda\Entity\Channel;
+use Nimda\Entity\Poll;
+use Nimda\Entity\Proposal;
 use React\Promise\ExtendedPromiseInterface;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
+use Symfony\Component\VarDumper\Cloner\Data;
 use function React\Promise\all;
 use function React\Promise\resolve;
 
@@ -154,17 +161,18 @@ abstract class PollCommand extends Command
 
     /**
      * @param int $pollId
-     * @return object|null
+     * @return Poll|object|null
      */
-    protected function findPollById(int $pollId)
+    protected function findPollById(int $pollId) : ?Poll
     {
-        $result = DB::table(Database::POLLS)->find($pollId);
+        /** @var ?Poll $poll */
+        $poll = DatabaseDoctrine::repo(Poll::class)->find($pollId);
 
-        if (empty($result)) {
+        if (empty($poll)) {
             return null;
         }
 
-        return $result;
+        return $poll;
     }
 
     /**
@@ -178,28 +186,31 @@ abstract class PollCommand extends Command
      */
     protected function getLatestPollIdOfChannel(ChannelInterface $channel) : int
     {
-        $result = DB::table(Database::POLLS)
-            ->select('id')
-            ->where('channelId', $channel->getId())
-            ->orderByDesc('id')
-            ->first();
+        $result = null;
+        try {
+            $result = DatabaseDoctrine::repo(Poll::class)
+                ->createQueryBuilder('p')
+                ->select('p.id')
+                ->where('p.channelVendorId = :channelVendorId')
+                ->setParameter("channelVendorId", $channel->getId())
+                ->orderBy('p.id', 'desc')
+                ->setMaxResults(1)
+                ->getQuery()
+                ->getSingleResult();
+        } catch (NoResultException $e) {
+        } catch (NonUniqueResultException $e) {
+            return 0;
+        }
 
         if (empty($result)) {
             return 0;
         }
 
-        return (int) $result->id;
+        return (int) $result['id'];
     }
 
     /**
-     * The Promise yields an object, not an array.
-     * Use $dbPoll->id for example, not $dbPöll['id']
-     * It holds the table columns as properties:
-     * +"id": "1"
-     * +"authorId": "238596624908025856"
-     * +"channelId": "855665583869919233"
-     * +"createdAt": null
-     * +"updatedAt": null // not used right now
+     * The Promise yields a Poll instance.
      * See Database.php for the complete reference.
      *
      * @param Message $triggerMessage
@@ -212,90 +223,87 @@ abstract class PollCommand extends Command
     {
         return new Promise(function($resolve, $reject) use ($triggerMessage, $pollMessage, $subject, $amountOfGrades) {
 
-            $insertedId = DB::table(Database::POLLS)->insertGetId([
-                'authorId' => $triggerMessage->author->id,
-                'channelId' => $triggerMessage->channel->getId(),
-                'messageId' => $pollMessage->id,
-                'triggerMessageId' => $triggerMessage->id,
-                'subject' => $subject,
-                'amountOfGrades' => $amountOfGrades,
-                'createdAt' => new \DateTime(),
-            ]);
+            $poll = new Poll();
+            $poll
+                ->setSubject($subject)
+                ->setAmountOfGrades($amountOfGrades)
+                ->setAuthorVendorId($triggerMessage->author->id)
+                ->setChannelVendorId($triggerMessage->channel->getId())
+                ->setMessageVendorId($pollMessage->id)
+                ->setTriggerMessageVendorId($triggerMessage->id)
+            ;
 
-            $result = DB::table(Database::POLLS)->find($insertedId);
-
-            if ($result) {
-//                dump($result);
-                return $resolve($result);
+            try {
+                DatabaseDoctrine::$entityManager->persist($poll);
+                DatabaseDoctrine::$entityManager->flush();
+            } catch (Exception $exception) {
+                return $reject($exception);
             }
 
-            return $reject();
+            assert(!empty($poll), "Poll is empty after initial persist()");
+
+            return $resolve($poll);
         });
     }
 
-    protected function removePoll(int $pollId)
+    /**
+     * sugar overdose, perhaps
+     *
+     * @param Poll|null $poll
+     * @throws ORMException
+     */
+    protected function removePoll(?Poll $poll)
     {
-        DB::table(Database::POLLS)->delete($pollId);
+        if (empty($poll)) {
+            return;
+        }
+
+        DatabaseDoctrine::$entityManager->remove($poll);
     }
 
     /**
-     * The Promise yields an object, not an array.
-     * Use $dbProposal->id for example, not $dbProposal['id']
-     * It holds the table columns as properties:
-     * See Database.php for the complete reference.
+     * The Promise yields a Proposal instance.
      *
      * @param Message $triggerMessage
      * @param Message $proposalMessage
      * @param string $proposalName
+     * @param Poll $poll
      * @return ExtendedPromiseInterface
      */
-    protected function addProposalToDb(?Message $triggerMessage, Message $proposalMessage, string $proposalName, int $pollId) : ExtendedPromiseInterface
-    {
-        return new Promise(function($resolve, $reject) use ($triggerMessage, $proposalMessage, $proposalName, $pollId) {
-
-            printf("Trying to write a new proposal `%s' into the database…\n", $proposalName);
-
-            $insertedId = DB::table(Database::PROPOSALS)->insertGetId([
-                'pollId' => $pollId,
-                'authorId' => $triggerMessage ? $triggerMessage->author->id : null,
-                'channelId' => $proposalMessage->channel->getId(),
-                'messageId' => $proposalMessage->id,
-                'triggerMessageId' => $triggerMessage ? $triggerMessage->id : null,
-                'name' => $proposalName,
-                'createdAt' => new \DateTime(),
-            ]);
-
-            if (empty($insertedId)) {
-                printf("ERROR inserting a new proposal in the database.\n");
-                return $reject("ERROR inserting a new proposal in the database.");
-            }
-
-            $result = DB::table(Database::PROPOSALS)->find($insertedId);
-
-            if ($result) {
-                //dump($result);
-
-                return $resolve($result);
-            }
-
-            return $reject("ERROR could not find the proposal we supposedly added.");
-        });
-    }
-
-    protected function getDbProposalsForPoll(int $pollId) : ExtendedPromiseInterface
+    protected function addProposalToDb(?Message $triggerMessage, Message $proposalMessage, string $proposalName, Poll $poll) : ExtendedPromiseInterface
     {
         return new Promise(
-            function ($resolve, $reject) use ($pollId) {
+            function($resolve, $reject) use ($triggerMessage, $proposalMessage, $proposalName, $poll) {
 
-                $resultsQuery = DB::table(Database::PROPOSALS)
-                    ->where('pollId', '=', $pollId)
-                    ->limit(32) // fixme: hard limit to move to ENV and $config
+                printf("Trying to write a new proposal `%s' into the database…\n", $proposalName);
+
+                $proposal = new Proposal();
+                $proposal
+                    ->setPoll($poll)
+                    ->setName($proposalName)
+                    ->setChannelVendorId($proposalMessage->channel->getId())
+                    ->setAuthorVendorId($triggerMessage ? $triggerMessage->author->id : null)
+                    ->setMessageVendorId($proposalMessage->id)
+                    ->setTriggerMessageVendorId($triggerMessage ? $triggerMessage->id : null)
                 ;
-                //dump($resultsQuery->toSql());
 
-                $results = $resultsQuery->get();
+                try {
+                    DatabaseDoctrine::$entityManager->persist($proposal);
+                    DatabaseDoctrine::$entityManager->flush();
+                } catch (Exception $exception) {
+                    return $reject($exception);
+                }
 
-                return $resolve($results);
+                return $resolve($proposal);
+            }
+        );
+    }
+
+    protected function getDbProposalsForPoll(Poll $poll) : ExtendedPromiseInterface
+    {
+        return new Promise(
+            function ($resolve, $reject) use ($poll) {
+                return $resolve($poll->getProposals()->toArray());
             }
         );
     }
@@ -375,17 +383,16 @@ abstract class PollCommand extends Command
      * @param int $amountOfGrades
      * @return PromiseInterface
      */
-    protected function addProposal(TextChannelInterface $channel, ?Message $triggerMessage, string $proposalName, int $pollId, int $amountOfGrades) : PromiseInterface
+    protected function addProposal(TextChannelInterface $channel, ?Message $triggerMessage, string $proposalName, Poll $poll) : PromiseInterface
     {
         return new Promise(
-            function ($resolve, $reject) use ($channel, $triggerMessage, $proposalName, $pollId, $amountOfGrades) {
+            function ($resolve, $reject) use ($channel, $triggerMessage, $proposalName, $poll) {
 
-                $pollEmote = "⚖️";
                 $proposalEmote = "📜";
                 $messageBody = sprintf(
                     "%s `%d`  %s **%s**\n",
-                    $pollEmote,
-                    $pollId,
+                    $this->getPollEmoji(),
+                    $poll->getId(),
                     $proposalEmote,
                     $proposalName
                 );
@@ -402,19 +409,20 @@ abstract class PollCommand extends Command
                         printf("ERROR failed to send a new message for the proposal `%s'..\n", $proposalName);
                         dump($error);
                     })
-                    ->then(function (Message $proposalMessage) use ($resolve, $reject, $triggerMessage, $proposalName, $pollId, $amountOfGrades) {
+                    ->then(function (Message $proposalMessage) use ($resolve, $reject, $triggerMessage, $proposalName, $poll) {
 
-                        $this->addProposalToDb($triggerMessage, $proposalMessage, $proposalName, $pollId)
-                            ->otherwise(function ($error) {
-                                printf("ERROR when adding a proposal to the database:\n");
-                                dump($error);
-                            })
+                        $this->addProposalToDb($triggerMessage, $proposalMessage, $proposalName, $poll)
+//                            ->otherwise(function ($error) use ($reject) {
+//                                printf("ERROR when adding a proposal to the database:\n");
+//                                dump($error);
+//                                return $reject($error);
+//                            })
                             ->done(function ($dbProposal) {
                                 printf("Wrote proposal to database.\n");
                             }, $reject);
 
                         return $this
-                            ->addGradingReactions($proposalMessage, $amountOfGrades)
+                            ->addGradingReactions($proposalMessage, $poll->getAmountOfGrades())
                             ->then(
                                 function() use ($resolve, $proposalName, $proposalMessage) {
                                     printf("Done adding urn reactions for proposal `%s'.\n", $proposalName);

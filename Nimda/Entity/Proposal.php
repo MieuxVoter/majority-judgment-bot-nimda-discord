@@ -96,6 +96,25 @@ class Proposal
     }
 
     /**
+     * @return Poll
+     */
+    public function getPoll(): Poll
+    {
+        return $this->poll;
+    }
+
+    /**
+     * @param Poll $poll
+     * @return Proposal
+     */
+    public function setPoll(Poll $poll): self
+    {
+        $this->poll = $poll;
+
+        return $this;
+    }
+
+    /**
      * @return string
      */
     public function getAuthorVendorId(): string

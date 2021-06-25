@@ -4,6 +4,7 @@ namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
+use Nimda\Entity\Poll;
 use React\Promise\PromiseInterface;
 use function React\Promise\all;
 use function React\Promise\reject;
@@ -107,12 +108,12 @@ class CreatePoll extends PollCommand
                         dump($error);
                     })
                     ->then(
-                        function ($pollObject) use ($pollMessage, $message, $amountOfGrades) {
+                        function (Poll $pollObject) use ($pollMessage, $message, $amountOfGrades) {
 
                             printf("Added new poll to database.\n");
                             dump($pollObject);
 
-                            $pollId = $pollObject->id;
+                            $pollId = $pollObject->getId();
 
                             $pollMessageEdition = $pollMessage->edit(sprintf(
                                 "⚖️ Poll #`%s` %s",

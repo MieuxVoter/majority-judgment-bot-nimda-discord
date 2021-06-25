@@ -7,6 +7,7 @@ namespace Nimda\Entity;
 use DateTime;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\PersistentCollection;
 
 
 /**
@@ -34,7 +35,7 @@ class Poll
      *     mappedBy="poll",
      * )
      */
-    protected ArrayCollection $proposals;
+    protected PersistentCollection $proposals;
 
     /**
      * Vendor Identifier of the User that created the poll.
@@ -103,7 +104,7 @@ class Poll
      */
     public function __construct()
     {
-        $this->proposals = new ArrayCollection();
+        //$this->proposals = new PersistentCollection();
         $this->createdAt = new DateTime();
     }
 
@@ -113,6 +114,14 @@ class Poll
     public function getId(): int
     {
         return $this->id;
+    }
+
+    /**
+     * @return PersistentCollection<Proposal>
+     */
+    public function getProposals(): PersistentCollection
+    {
+        return $this->proposals;
     }
 
     /**

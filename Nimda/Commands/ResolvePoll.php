@@ -5,12 +5,15 @@ namespace Nimda\Commands;
 use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\MessageEmbed;
 use CharlotteDunois\Yasmin\Models\MessageReaction;
+use Exception;
 use Illuminate\Support\Collection;
 use MieuxVoter\MajorityJudgment\MajorityJudgmentDeliberator;
 use MieuxVoter\MajorityJudgment\Model\Result\ProposalResult;
 use MieuxVoter\MajorityJudgment\Model\Tally\TwoArraysPollTally;
+use Nimda\Entity\Proposal;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
+use Throwable;
 use function React\Promise\reject;
 
 /**
@@ -24,7 +27,7 @@ class ResolvePoll extends PollCommand
 
     /**
      * @inheritDoc
-     * @throws \Throwable
+     * @throws Throwable
      */
     public function trigger(Message $message, Collection $args = null): PromiseInterface
     {
@@ -52,24 +55,22 @@ class ResolvePoll extends PollCommand
             printf("Guessing the poll identifier…\n");
             try {
                 $pollId = $this->getLatestPollIdOfChannel($channel);
-            } catch (\Exception $exception) {
+            } catch (Exception $exception) {
                 printf("ERROR failed to fetch the latest poll id of channel `%s'.\n", $channel);
                 dump($exception);
                 return reject();
             }
         }
 
-        // Perhaps this is unsafe, because we don't  call done() or return the promise,
-        // so what happens if it gets garbage collected ?    Or worse, if it does not ?
-        $deleteMessagePromise = $message->delete(10);
+        $message->delete(10, "command");
 
         $channel->startTyping();
 
+        $poll = null;
         $pollIsValid = true;
-
         try {
             $poll = $this->findPollById($pollId);
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             sprintf("ERROR findPollById threw:\n");
             dump($exception);
             $pollIsValid = false;
@@ -93,7 +94,7 @@ class ResolvePoll extends PollCommand
             ));
         }
 
-        $dbProposalsPromise = $this->getDbProposalsForPoll($pollId);
+        $dbProposalsPromise = $this->getDbProposalsForPoll($poll);
         $commandPromise = $dbProposalsPromise
             // Error is caught by bottom handler.  Do we need this?
 //            ->otherwise(
@@ -103,15 +104,15 @@ class ResolvePoll extends PollCommand
 //                }
 //            )
             ->then(
-                function (Collection $dbProposals) use ($channel) {
+                function ($dbProposals) use ($channel) {
                     printf("Found %d proposals in the database.\n", count($dbProposals));
 
                     return new Promise(
                         function ($resolve, $reject) use ($channel, $dbProposals) {
 
-                            $proposalsMessagesIds = array_map(function ($dbProposal) {
-                                return $dbProposal->messageId;
-                            }, $dbProposals->all());
+                            $proposalsMessagesIds = array_map(function (Proposal $dbProposal) {
+                                return $dbProposal->getMessageVendorId();
+                            }, $dbProposals);
 
                             $this
                                 ->getMessages($channel, $proposalsMessagesIds)
@@ -122,7 +123,7 @@ class ResolvePoll extends PollCommand
                                 ->done(
                                     function (array $messages) use ($resolve, $dbProposals) {
                                         // Filter out messages that probably were deleted and we failed to fetch
-                                        $validProposals = array_filter($dbProposals->all(), function($key) use ($messages) {
+                                        $validProposals = array_filter($dbProposals, function($key) use ($messages) {
                                             return ! empty($messages[$key]);
                                         }, ARRAY_FILTER_USE_KEY);
                                         $validMessages = array_filter($messages, function($message) {
@@ -144,13 +145,13 @@ class ResolvePoll extends PollCommand
                     /** @var Message[] $proposalsMessages */
                     [$proposalsObjects, $proposalsMessages] = $things;
 
-                    $amountOfProposals = count($proposalsMessages);
+//                    $amountOfProposals = count($proposalsMessages);
 
                     printf("Got %d messages.\n", count($proposalsMessages));
 
                     $amountOfParticipants = 0;
                     $pollTally = [];
-                    $gradesEmotes = $this->gradesEmotes[$poll->amountOfGrades];
+                    $gradesEmotes = $this->gradesEmotes[$poll->getAmountOfGrades()];
                     foreach ($proposalsMessages as $proposalsMessage) {
                         /** @var MessageReaction[] $reactions */
                         $reactions = array_filter(
@@ -222,15 +223,15 @@ class ResolvePoll extends PollCommand
                         $description .= sprintf(
                             "**`%d`** ➡️ %s \n",
                             $proposalResult->getRank(),
-                            $proposalResult->getProposal()->name
+                            $proposalResult->getProposal()->getName()
                         );
                     }
 
                     $embed = new MessageEmbed([
                         'title' => sprintf(
                             "⚖️ `#%d` — %s",
-                            $poll->id,
-                            $poll->subject
+                            $poll->getId(),
+                            $poll->getSubject()
                         ),
                         'description' => $description,
                         'image' => [
@@ -270,7 +271,7 @@ class ResolvePoll extends PollCommand
                 printf("ERROR with the !result command:\n");
                 dump($error);
                 $insecureButHandy = "";
-                if ($this->shouldShowDebug() && ($error instanceof \Throwable)) {
+                if ($this->shouldShowDebug() && ($error instanceof Throwable)) {
                     $insecureButHandy = $error->getMessage();
                 }
                 $channel->stopTyping();
