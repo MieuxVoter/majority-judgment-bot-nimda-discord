@@ -21,7 +21,7 @@
     "ext-posix": "^7.4",
     "doctrine/cache": "^2.0",
     "doctrine/orm": "^2.9",
-    "illuminate/database": "^5.7",
+    "illuminate/support": "^8.48",
     "laravel-discord/yasmin": "^0.8",
     "mieuxvoter/majority-judgment": "^1.0",
     "symfony/cache": "^5.3",
