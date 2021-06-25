@@ -65,6 +65,7 @@ class Discord
              */
             'public' => [
                 \Nimda\Commands\Join::class,
+                \Nimda\Commands\Leave::class,
                 \Nimda\Commands\CreatePoll::class,
                 \Nimda\Commands\CreateProposal::class,
                 \Nimda\Commands\ResolvePoll::class,

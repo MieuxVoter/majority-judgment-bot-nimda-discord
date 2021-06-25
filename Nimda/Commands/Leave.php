@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Nimda\Commands;
 
@@ -9,14 +9,14 @@ use Nimda\Entity\Channel;
 use React\Promise\PromiseInterface;
 
 /**
- * Enables the bot on the channel.
+ * Disables the bot on the channel.
  *
- * !join
+ * !leave
  *
- * Class Join
+ * Class Leave
  * @package Nimda\Core\Commands
  */
-final class Join extends PollCommand
+final class Leave extends PollCommand
 {
 
     /**
@@ -28,32 +28,33 @@ final class Join extends PollCommand
 
         $channel->startTyping();
 
-        printf("!join\n");
-
-        if ( ! $this->isMentioningMe($message)) {
-            $channel->stopTyping();
-            return $this->sendToast(
-                $channel, $message,
-                sprintf(
-                    "If you want me to join this channel, " .
-                    "please mention me as well, like so: " .
-                    "`!join @Majority Judgment`"
-                ),
-                [],
-                10
-            );
-        }
+        printf("!leave\n");
 
         /** @var Channel $dbChannel */
         $dbChannel = DatabaseDoctrine::repo(Channel::class)->findOneBy(
             ['discordId' => $channel->getId()]
         );
 
-        $message->delete(0, "command");
+        $hasBotJoinedChannel = (null !== $dbChannel);
 
-        if (null !== $dbChannel) {
-            printf("Already joined channel `%s'.\n", $dbChannel->getDiscordId());
-            //dump($dbChannel);
+        //$message->delete(0, "command");  // let's keep it, for transparency?
+
+        if ( ! $this->isMentioningMe($message) && $hasBotJoinedChannel) {
+            $channel->stopTyping();
+            return $this->sendToast(
+                $channel, $message,
+                sprintf(
+                    "If you want me to leave this channel, " .
+                    "please mention me as well, like so: " .
+                    "`!leave @Majority Judgment`"
+                ),
+                [],
+                20
+            );
+        }
+
+        if ( ! $hasBotJoinedChannel) {
+            printf("Already left channel `%s'.\n", $dbChannel->getDiscordId());
             $channel->stopTyping();
             return $this->sendToast(
                 $channel, $message,
@@ -63,16 +64,8 @@ final class Join extends PollCommand
             );
         }
 
-        $dbChannel = new Channel();
-        $dbChannel->setDiscordId($channel->getId());
-        $dbChannel->setGuildId($message->guild->id);
-        $dbChannel->setGuildName($message->guild->name);
-        $dbChannel->setJoinerId($message->author->id);
-        $dbChannel->setJoinerUsername($message->author->username);
-//        $dbChannel->setName(); // How do | can we get the channel's name?
-
         try {
-            DatabaseDoctrine::$entityManager->persist($dbChannel);
+            DatabaseDoctrine::$entityManager->remove($dbChannel);
             DatabaseDoctrine::$entityManager->flush();
         } catch (\Exception $exception) {
             $channel->stopTyping();
@@ -83,16 +76,18 @@ final class Join extends PollCommand
                     $exception->getMessage()
                 ),
                 [],
-                20
+                300
             );
         }
 
-        printf("Joined channel `%s' !\n", $dbChannel->getDiscordId());
+        printf("Left channel `%s' !\n", $dbChannel->getDiscordId());
 
         $channel->stopTyping();
         return $channel->send(
             sprintf(
-                "OK!  **Let's do this!**  Type `!poll` to start a poll."
+                "Farewell.  Ask me to `!join` again anytime.\n\n" .
+                "I have **deleted everything** I knew about this channel, " .
+                "in the _eternal sunshine of my spotless mind_."
             ),
             []
         );
