@@ -8,17 +8,21 @@
 
 Made with [Nimda](https://github.com/JABirchall/NimdaDiscord), ❤, [Yasmin](https://github.com/CharlotteDunois/Yasmin).
 
+> Here is for example what `!poll week` generates:
+
 ![Demo Usage of the Bot 1](docs/demo-01.png)
 
 ## Usage
 
 The bot responds to the following commands:
 
+- `!join` to let the bot join a channel _(required, admin only)_
+- `!leave` to make the bot leave a channel _(admin only)_
 - `!poll` to create a new poll in the current channel
 - `!proposal` to suggest a proposal for a previously created poll
 - `!result` to show the results of the latest poll of the channel
 
-**Anyone** may issue commands to the bot, see issue [#3](https://github.com/MieuxVoter/majority-judgment-bot-nimda-discord/issues/3).
+**Anyone** may issue `!poll`, `!proposal` and `!result` commands to the bot, see issue [#3](https://github.com/MieuxVoter/majority-judgment-bot-nimda-discord/issues/3).
 Join us in specifying how the bot should handle this, by describing your needs.
 
 
