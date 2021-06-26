@@ -190,9 +190,15 @@ final class CommandContainer
      */
     public function onMessage(Message $message): ?PromiseInterface
     {
-        if ($message->author->bot ||
-            $message->author->id === $message->client->user->id ||
-            $message->guild === null) {
+        if ($message->guild === null) {
+            printf("INFO private message ! `%s'\n", $message->cleanContent);
+        }
+
+        if (
+            $message->author->bot  ||
+            $message->author->id === $message->client->user->id  ||
+            $message->guild === null
+        ) {
             return null;
         }
 
@@ -209,7 +215,7 @@ final class CommandContainer
             });
         }
 
-        if(!Str::startsWith($message->content, Discord::config()['prefix'])) {
+        if( ! Str::startsWith($message->content, Discord::config()['prefix'])) {
             return null;
         }
 

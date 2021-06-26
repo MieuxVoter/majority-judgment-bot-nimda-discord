@@ -7,7 +7,6 @@ namespace Nimda\Events;
 use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\MessageReaction;
 use CharlotteDunois\Yasmin\Models\User;
-use Nimda\Configuration\Discord;
 use Nimda\Core\Event;
 
 
@@ -23,7 +22,7 @@ use Nimda\Core\Event;
  * Class VoteViaReaction
  * @package Nimda\Events
  */
-class VoteViaReaction extends Event
+final class VoteViaReaction extends Event
 {
     function messageReactionAdd(MessageReaction $reaction, User $user)
     {

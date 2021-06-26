@@ -4,6 +4,7 @@ namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
+use Nimda\Entity\Poll;
 use React\Promise\PromiseInterface;
 use function React\Promise\all;
 use function React\Promise\reject;
@@ -11,16 +12,12 @@ use function React\Promise\reject;
 /**
  *
  * !poll What do you want from life?
- *
- *
  * !poll 5 What do you want from life?
- *
- *
  *
  * Class CreatePoll
  * @package Nimda\Core\Commands
  */
-class CreatePoll extends PollCommand
+final class CreatePoll extends PollCommand
 {
 
     /**
@@ -30,10 +27,14 @@ class CreatePoll extends PollCommand
     {
         $defaultAmountOfGrades = 5;
         $minimumAmountOfGrades = 2;
-        $maximumAmountOfGrades = 10;
+        $maximumAmountOfGrades = 10; // if you change this, change $gradesEmotes in PollCommand as well
 
         $channel = $message->channel;
         $actor = $message->author;
+
+        if ( ! $this->isChannelJoined($channel)) {
+            return $this->remindThatJoinIsRequired($message);
+        }
 
         $amountOfGrades = $args->get('grades');
         if (empty($amountOfGrades)) {
@@ -91,8 +92,8 @@ class CreatePoll extends PollCommand
             ]
         ];
 
-        $commandPromise = $message
-            ->channel->send("", $options)
+        $commandPromise = $channel
+            ->send("", $options)
             ->then(function (Message $pollMessage) use ($args, $message, $subject, $amountOfGrades) {
 
                 $addedPoll = $this->addPollToDb($message, $pollMessage, $subject, $amountOfGrades);
@@ -103,12 +104,12 @@ class CreatePoll extends PollCommand
                         dump($error);
                     })
                     ->then(
-                        function ($pollObject) use ($pollMessage, $message, $amountOfGrades) {
+                        function (Poll $pollObject) use ($pollMessage, $message, $amountOfGrades) {
 
                             printf("Added new poll to database.\n");
                             dump($pollObject);
 
-                            $pollId = $pollObject->id;
+                            $pollId = $pollObject->getId();
 
                             $pollMessageEdition = $pollMessage->edit(sprintf(
                                 "⚖️ Poll #`%s` %s",
@@ -122,6 +123,8 @@ class CreatePoll extends PollCommand
                                 ->otherwise(function ($error) {
                                     printf("ERROR editing the poll to add its ID.\n");
                                     dump($error);
+
+                                    return $error;
                                 })
                                 ->then(function (Message $editedPollMessage) use ($message, $pollId, $amountOfGrades) {
                                     printf("Done editing the poll message to add the poll ID.\n");

@@ -17,7 +17,7 @@ class Discord
      *
      * @var array $config Nimda master configuration
      */
-    public static $config = [
+    public static array $config = [
         /**
          * Discord API configuration
          */
@@ -58,12 +58,13 @@ class Discord
 //                \Nimda\Core\Commands\PurgeChat::class,
 //                \Nimda\Core\Commands\SayHello::class,
 //                \Nimda\Core\Commands\Dice::class,
-//                \Nimda\Core\Commands\Quotes::class,
             ],
             /**
              * Public commands created by the community. The Nimda Team are not responsible for their functionality.
              */
             'public' => [
+                \Nimda\Commands\Join::class,
+                \Nimda\Commands\Leave::class,
                 \Nimda\Commands\CreatePoll::class,
                 \Nimda\Commands\CreateProposal::class,
                 \Nimda\Commands\ResolvePoll::class,

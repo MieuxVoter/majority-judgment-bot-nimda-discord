@@ -4,6 +4,7 @@ namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\HTTP\DiscordAPIException;
 use CharlotteDunois\Yasmin\Models\Message;
+use Exception;
 use Illuminate\Support\Collection;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -35,6 +36,11 @@ class CreateProposal extends PollCommand
     {
         $channel = $message->channel;
         $actor = $message->author;
+
+        if ( ! $this->isChannelJoined($channel)) {
+            printf("Trying to use !proposal on a non-joined channel.\n");
+            return reject();
+        }
 
         $channel->startTyping();
 
@@ -70,7 +76,7 @@ class CreateProposal extends PollCommand
             //printf("Guessing the poll identifier…\n");
             try {
                 $pollId = $this->getLatestPollIdOfChannel($channel);
-            } catch (\Exception $exception) {
+            } catch (Exception $exception) {
                 printf("ERROR failed to fetch the latest poll id of channel `%s'.\n", $channel);
                 dump($exception);
                 $channel->stopTyping();
@@ -116,13 +122,13 @@ class CreateProposal extends PollCommand
                 // fetchMessage handles this check for now, yet best add one later here for good measure
 
                 return $channel
-                    ->fetchMessage($pollObject->messageId)
-                    ->otherwise(function ($error) use ($resolve, $reject, $channel, $message, $pollId) {
+                    ->fetchMessage($pollObject->getMessageVendorId())
+                    ->otherwise(function ($error) use ($resolve, $reject, $channel, $message, $pollId, $pollObject) {
                         if (get_class($error) === DiscordAPIException::class) {
                             /** @var DiscordAPIException $error */
                             if ($error->getCode() === 10008) {  // Unknown Message
                                 printf("WARN The message for poll %d has been deleted!\n", $pollId);
-                                $this->removePoll($pollId);
+                                $this->removePollFromDb($pollObject);
                                 $channel->stopTyping();
                                 // We resolve because we handled the case and there's no reason to go through the command error catcher
                                 return $resolve($this->sendToast(
@@ -147,8 +153,7 @@ class CreateProposal extends PollCommand
                             $channel,
                             $message,
                             $name,
-                            $pollObject->id,
-                            $pollObject->amountOfGrades
+                            $pollObject
                         );
 
                         return $proposalAddition->then(

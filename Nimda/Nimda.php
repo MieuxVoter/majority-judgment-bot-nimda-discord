@@ -1,4 +1,4 @@
-<?php  declare(strict_types=1);
+<?php declare(strict_types=1);
 
 namespace Nimda;
 
@@ -10,6 +10,8 @@ use Nimda\Core\Database;
 use Nimda\Core\EventContainer;
 use Nimda\Core\TimerContainer;
 use React\EventLoop\Factory;
+use React\EventLoop\LoopInterface;
+use Throwable;
 
 /**
  * Class Nimda
@@ -18,39 +20,40 @@ use React\EventLoop\Factory;
 final class Nimda
 {
     /**
-     * @var \React\EventLoop\LoopInterface $loop
+     * @var LoopInterface $loop
      */
-    private $loop;
+    private LoopInterface $loop;
 
     /**
-     * @var \CharlotteDunois\Yasmin\Client $client
+     * @var Client $client
      */
-    private $client;
+    private Client $client;
 
     /**
-     * @var \Nimda\Core\CommandContainer $commands
+     * @var CommandContainer $commands
      */
-    private $commands;
+    private CommandContainer $commands;
 
     /**
-     * @var \Nimda\Core\EventContainer $events
+     * @var EventContainer $events
      */
-    private $events;
+    private EventContainer $events;
 
     /**
-     * @var \Nimda\Core\TimerContainer $timers
+     * @var TimerContainer $timers
      */
-    private $timers;
+    private TimerContainer $timers;
 
     /**
      * Nimda constructor.
-     * @throws \Throwable
+     * @throws Throwable
      */
     public function __construct()
     {
         $this->startupCheck();
         $this->loop = Factory::create();
         $this->client = new Client(Discord::config()['options'], $this->loop);
+
         Database::boot();
 
         $this->commands = new CommandContainer();
@@ -98,7 +101,7 @@ final class Nimda
     }
 
     /**
-     * @throws \Exception & \Throwable
+     * @throws \Exception & Throwable
      * @internal Check for invalid options before booting
      *
      */

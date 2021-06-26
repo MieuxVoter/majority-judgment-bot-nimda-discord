@@ -1,15 +1,20 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Nimda\Commands;
 
-use CharlotteDunois\Yasmin\HTTP\Endpoints\Channel;
 use CharlotteDunois\Yasmin\Interfaces\ChannelInterface;
 use CharlotteDunois\Yasmin\Interfaces\TextChannelInterface;
 use CharlotteDunois\Yasmin\Models\Message;
 use CharlotteDunois\Yasmin\Models\User;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
+use Doctrine\ORM\ORMException;
+use Exception;
 use Nimda\Core\Command;
 use Nimda\Core\Database;
-use Nimda\DB;
+use Nimda\Entity\Channel;
+use Nimda\Entity\Poll;
+use Nimda\Entity\Proposal;
 use React\Promise\ExtendedPromiseInterface;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -24,10 +29,19 @@ use function React\Promise\resolve;
  */
 abstract class PollCommand extends Command
 {
+    #   _____             __ _
+    #  / ____|           / _(_)
+    # | |     ___  _ __ | |_ _  __ _
+    # | |    / _ \| '_ \|  _| |/ _` |
+    # | |___| (_) | | | | | | | (_| |
+    #  \_____\___/|_| |_|_| |_|\__, |
+    #                           __/ |
+    #                          |___/
+
     // From worst to best, for each grading size. Let's hope 10 grades is enough.
     // Would also love literal grades like "Reject", "Passable", etc.  Gotta do what we can.
     // The numbers are unicode, not the usual ASCII.
-    protected $gradesEmotes = [
+    protected array $gradesEmotes = [
         2 => ["👎", "👍"],
         3 => ["👎", "👊", "👍"],
         4 => ["🤬", "😐", "🙂", "😍"],
@@ -40,20 +54,29 @@ abstract class PollCommand extends Command
         // If you add more, remember to clamp $amountOfGrades accordingly below
     ];
 
-    protected function getPollEmoji()
+    protected function getPollEmoji() : string
     {
         return "⚖️";
     }
 
-    protected function getProposalEmoji()
+    protected function getProposalEmoji() : string
     {
         return "⚖️";
     }
 
-    protected function getErrorEmoji()
+    protected function getErrorEmoji() : string
     {
         return "⛔️";
     }
+
+    #  _____  _                       _    ____                        _
+    # |  __ \(_)                     | |  / __ \                      (_)
+    # | |  | |_ ___  ___ ___  _ __ __| | | |  | |_   _  ___ _ __ _   _ _ _ __   __ _
+    # | |  | | / __|/ __/ _ \| '__/ _` | | |  | | | | |/ _ \ '__| | | | | '_ \ / _` |
+    # | |__| | \__ \ (_| (_) | | | (_| | | |__| | |_| |  __/ |  | |_| | | | | | (_| |
+    # |_____/|_|___/\___\___/|_|  \__,_|  \___\_\\__,_|\___|_|   \__, |_|_| |_|\__, |
+    #                                                             __/ |         __/ |
+    #                                                            |___/         |___/
 
     /**
      * Fetch, in sequence, all the messages of $channel with the ids $messagesIds.
@@ -124,19 +147,29 @@ abstract class PollCommand extends Command
         );
     }
 
+    #  _____        _        _
+    # |  __ \      | |      | |
+    # | |  | | __ _| |_ __ _| |__   __ _ ___  ___
+    # | |  | |/ _` | __/ _` | '_ \ / _` / __|/ _ \
+    # | |__| | (_| | || (_| | |_) | (_| \__ \  __/
+    # |_____/ \__,_|\__\__,_|_.__/ \__,_|___/\___|
+    #
+    #
+
     /**
      * @param int $pollId
-     * @return object|null
+     * @return Poll|object|null
      */
-    protected function findPollById(int $pollId)
+    protected function findPollById(int $pollId) : ?Poll
     {
-        $result = DB::table(Database::POLLS)->find($pollId);
+        /** @var ?Poll $poll */
+        $poll = Database::repo(Poll::class)->find($pollId);
 
-        if (empty($result)) {
+        if (empty($poll)) {
             return null;
         }
 
-        return $result;
+        return $poll;
     }
 
     /**
@@ -150,28 +183,31 @@ abstract class PollCommand extends Command
      */
     protected function getLatestPollIdOfChannel(ChannelInterface $channel) : int
     {
-        $result = DB::table(Database::POLLS)
-            ->select('id')
-            ->where('channelId', $channel->getId())
-            ->orderByDesc('id')
-            ->first();
+        $result = null;
+        try {
+            $result = Database::repo(Poll::class)
+                ->createQueryBuilder('p')
+                ->select('p.id')
+                ->where('p.channelVendorId = :channelVendorId')
+                ->setParameter("channelVendorId", $channel->getId())
+                ->orderBy('p.id', 'desc')
+                ->setMaxResults(1)
+                ->getQuery()
+                ->getSingleResult();
+        } catch (NoResultException $e) {
+        } catch (NonUniqueResultException $e) {
+            return 0;
+        }
 
         if (empty($result)) {
             return 0;
         }
 
-        return (int) $result->id;
+        return (int) $result['id'];
     }
 
     /**
-     * The Promise yields an object, not an array.
-     * Use $dbPoll->id for example, not $dbPöll['id']
-     * It holds the table columns as properties:
-     * +"id": "1"
-     * +"authorId": "238596624908025856"
-     * +"channelId": "855665583869919233"
-     * +"createdAt": null
-     * +"updatedAt": null // not used right now
+     * The Promise yields a Poll instance.
      * See Database.php for the complete reference.
      *
      * @param Message $triggerMessage
@@ -184,91 +220,143 @@ abstract class PollCommand extends Command
     {
         return new Promise(function($resolve, $reject) use ($triggerMessage, $pollMessage, $subject, $amountOfGrades) {
 
-            $insertedId = DB::table(Database::POLLS)->insertGetId([
-                'authorId' => $triggerMessage->author->id,
-                'channelId' => $triggerMessage->channel->getId(),
-                'messageId' => $pollMessage->id,
-                'triggerMessageId' => $triggerMessage->id,
-                'subject' => $subject,
-                'amountOfGrades' => $amountOfGrades,
-                'createdAt' => new \DateTime(),
-            ]);
+            $poll = new Poll();
+            $poll
+                ->setSubject($subject)
+                ->setAmountOfGrades($amountOfGrades)
+                ->setAuthorVendorId($triggerMessage->author->id)
+                ->setChannelVendorId($triggerMessage->channel->getId())
+                ->setMessageVendorId($pollMessage->id)
+                ->setTriggerMessageVendorId($triggerMessage->id)
+            ;
 
-            $result = DB::table(Database::POLLS)->find($insertedId);
-
-            if ($result) {
-//                dump($result);
-                return $resolve($result);
+            try {
+                Database::$entityManager->persist($poll);
+                Database::$entityManager->flush();
+            } catch (Exception $exception) {
+                return $reject($exception);
             }
 
-            return $reject();
+            assert(!empty($poll), "Poll is empty after initial persist()");
+
+            return $resolve($poll);
         });
     }
 
-    protected function removePoll(int $pollId)
+    /**
+     * sugar overdose, perhaps
+     *
+     * @param Poll|null $poll
+     * @throws ORMException
+     */
+    protected function removePollFromDb(?Poll $poll)
     {
-        DB::table(Database::POLLS)->delete($pollId);
+        if (empty($poll)) {
+            return;
+        }
+
+        Database::$entityManager->remove($poll);
     }
 
     /**
-     * The Promise yields an object, not an array.
-     * Use $dbProposal->id for example, not $dbProposal['id']
-     * It holds the table columns as properties:
-     * See Database.php for the complete reference.
+     * The Promise yields a Proposal instance.
      *
      * @param Message $triggerMessage
      * @param Message $proposalMessage
      * @param string $proposalName
+     * @param Poll $poll
      * @return ExtendedPromiseInterface
      */
-    protected function addProposalToDb(?Message $triggerMessage, Message $proposalMessage, string $proposalName, int $pollId) : ExtendedPromiseInterface
-    {
-        return new Promise(function($resolve, $reject) use ($triggerMessage, $proposalMessage, $proposalName, $pollId) {
-
-            printf("Trying to write a new proposal `%s' into the database…\n", $proposalName);
-
-            $insertedId = DB::table(Database::PROPOSALS)->insertGetId([
-                'pollId' => $pollId,
-                'authorId' => $triggerMessage ? $triggerMessage->author->id : null,
-                'channelId' => $proposalMessage->channel->getId(),
-                'messageId' => $proposalMessage->id,
-                'triggerMessageId' => $triggerMessage ? $triggerMessage->id : null,
-                'name' => $proposalName,
-                'createdAt' => new \DateTime(),
-            ]);
-
-            if (empty($insertedId)) {
-                printf("ERROR inserting a new proposal in the database.\n");
-                return $reject("ERROR inserting a new proposal in the database.");
-            }
-
-            $result = DB::table(Database::PROPOSALS)->find($insertedId);
-
-            if ($result) {
-                //dump($result);
-
-                return $resolve($result);
-            }
-
-            return $reject("ERROR could not find the proposal we supposedly added.");
-        });
-    }
-
-    protected function getDbProposalsForPoll(int $pollId) : ExtendedPromiseInterface
+    protected function addProposalToDb(?Message $triggerMessage, Message $proposalMessage, string $proposalName, Poll $poll) : ExtendedPromiseInterface
     {
         return new Promise(
-            function ($resolve, $reject) use ($pollId) {
+            function($resolve, $reject) use ($triggerMessage, $proposalMessage, $proposalName, $poll) {
 
-                $resultsQuery = DB::table(Database::PROPOSALS)
-                    ->where('pollId', '=', $pollId)
-                    ->limit(32) // fixme: hard limit to move to ENV and $config
+                printf("Trying to write a new proposal `%s' into the database…\n", $proposalName);
+
+                $proposal = new Proposal();
+                $proposal
+                    ->setPoll($poll)
+                    ->setName($proposalName)
+                    ->setChannelVendorId($proposalMessage->channel->getId())
+                    ->setAuthorVendorId($triggerMessage ? $triggerMessage->author->id : null)
+                    ->setMessageVendorId($proposalMessage->id)
+                    ->setTriggerMessageVendorId($triggerMessage ? $triggerMessage->id : null)
                 ;
-                //dump($resultsQuery->toSql());
 
-                $results = $resultsQuery->get();
+                try {
+                    Database::$entityManager->persist($proposal);
+                    Database::$entityManager->flush();
+                } catch (Exception $exception) {
+                    return $reject($exception);
+                }
 
-                return $resolve($results);
+                return $resolve($proposal);
             }
+        );
+    }
+
+    protected function getDbProposalsForPoll(Poll $poll) : ExtendedPromiseInterface
+    {
+        return new Promise(
+            function ($resolve, $reject) use ($poll) {
+                return $resolve($poll->getProposals()->toArray());
+            }
+        );
+    }
+
+    protected function findDbChannel(?TextChannelInterface $channel) : ?Channel
+    {
+        if (null === $channel) {
+            return null;
+        }
+
+        /** @var Channel $dbChannel */
+        $dbChannel = Database::repo(Channel::class)->findOneBy([
+            'discordId' => $channel->getId(),
+        ]);
+
+        return $dbChannel;
+    }
+
+    protected function isChannelJoined(?TextChannelInterface $channel) : bool
+    {
+        if (null === $channel) {
+            return false;
+        }
+
+        $dbChannel = $this->findDbChannel($channel);
+
+        if (null === $dbChannel) {
+            return false;
+        }
+
+//        if ($dbChannel->isBanned()) {
+//            return false;
+//        }
+
+        return true;
+    }
+
+    #  _    _ _       _       _                    _
+    # | |  | (_)     | |     | |                  | |
+    # | |__| |_  __ _| |__   | |     _____   _____| |
+    # |  __  | |/ _` | '_ \  | |    / _ \ \ / / _ \ |
+    # | |  | | | (_| | | | | | |___|  __/\ V /  __/ |
+    # |_|  |_|_|\__, |_| |_| |______\___| \_/ \___|_|
+    #            __/ |
+    #           |___/
+
+    protected function remindThatJoinIsRequired(Message $triggerMessage)
+    {
+        return $this->sendToast(
+            $triggerMessage->channel,
+            $triggerMessage,
+            "Are you trying to give me a command?\n".
+            "If so, type `!join` to let me in this channel.\n".
+            "",
+            [],
+            10
         );
     }
 
@@ -279,21 +367,19 @@ abstract class PollCommand extends Command
      * @param TextChannelInterface $channel
      * @param Message|null $triggerMessage
      * @param string $proposalName
-     * @param int $pollId
-     * @param int $amountOfGrades
+     * @param Poll $poll
      * @return PromiseInterface
      */
-    protected function addProposal(TextChannelInterface $channel, ?Message $triggerMessage, string $proposalName, int $pollId, int $amountOfGrades) : PromiseInterface
+    protected function addProposal(TextChannelInterface $channel, ?Message $triggerMessage, string $proposalName, Poll $poll) : PromiseInterface
     {
         return new Promise(
-            function ($resolve, $reject) use ($channel, $triggerMessage, $proposalName, $pollId, $amountOfGrades) {
+            function ($resolve, $reject) use ($channel, $triggerMessage, $proposalName, $poll) {
 
-                $pollEmote = "⚖️";
                 $proposalEmote = "📜";
                 $messageBody = sprintf(
                     "%s `%d`  %s **%s**\n",
-                    $pollEmote,
-                    $pollId,
+                    $this->getPollEmoji(),
+                    $poll->getId(),
                     $proposalEmote,
                     $proposalName
                 );
@@ -310,19 +396,23 @@ abstract class PollCommand extends Command
                         printf("ERROR failed to send a new message for the proposal `%s'..\n", $proposalName);
                         dump($error);
                     })
-                    ->then(function (Message $proposalMessage) use ($resolve, $reject, $triggerMessage, $proposalName, $pollId, $amountOfGrades) {
+                    ->then(function (Message $proposalMessage) use ($resolve, $reject, $triggerMessage, $proposalName, $poll) {
 
-                        $this->addProposalToDb($triggerMessage, $proposalMessage, $proposalName, $pollId)
-                            ->otherwise(function ($error) {
-                                printf("ERROR when adding a proposal to the database:\n");
-                                dump($error);
-                            })
-                            ->done(function ($dbProposal) {
-                                printf("Wrote proposal to database.\n");
+                        $this->addProposalToDb($triggerMessage, $proposalMessage, $proposalName, $poll)
+//                            ->otherwise(function ($error) use ($reject) {
+//                                printf("ERROR when adding a proposal to the database:\n");
+//                                dump($error);
+//                                return $reject($error);
+//                            })
+                            ->done(function (Proposal $dbProposal) {
+                                printf(
+                                    "Wrote proposal #%d `%s' to database.\n",
+                                    $dbProposal->getId(), $dbProposal->getName()
+                                );
                             }, $reject);
 
                         return $this
-                            ->addGradingReactions($proposalMessage, $amountOfGrades)
+                            ->addGradingReactions($proposalMessage, $poll->getAmountOfGrades())
                             ->then(
                                 function() use ($resolve, $proposalName, $proposalMessage) {
                                     printf("Done adding urn reactions for proposal `%s'.\n", $proposalName);
@@ -404,18 +494,31 @@ abstract class PollCommand extends Command
         });
     }
 
+    #  _    _ _   _ _
+    # | |  | | | (_) |
+    # | |  | | |_ _| |___
+    # | |  | | __| | / __|
+    # | |__| | |_| | \__ \
+    #  \____/ \__|_|_|___/
+    #
+
     /**
      * I am bot.  Am I $user ?
      *
      * @param User $user
      * @return bool
      */
-    protected function isMe(?User $user)
+    protected function isMe(?User $user) : bool
     {
         return !empty($user) && $user === $user->client->user;
     }
 
-    protected function shouldShowDebug()
+    protected function isMentioningMe(Message $message) : bool
+    {
+        return in_array($message->client->user, $message->mentions->users->all());
+    }
+
+    protected function shouldShowDebug() : bool
     {
         return getenv("APP_ENV") !== "prod";
     }
