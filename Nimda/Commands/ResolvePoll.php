@@ -22,7 +22,7 @@ use function React\Promise\reject;
  * Class ResolvePoll
  * @package Nimda\Core\Commands
  */
-class ResolvePoll extends PollCommand
+final class ResolvePoll extends PollCommand
 {
 
     /**

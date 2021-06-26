@@ -3,6 +3,7 @@
 namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
+use CharlotteDunois\Yasmin\Models\User;
 use Illuminate\Support\Collection;
 use Nimda\Core\Database;
 use Nimda\Entity\Channel;
@@ -25,6 +26,7 @@ final class Leave extends PollCommand
     public function trigger(Message $message, Collection $args = null): PromiseInterface
     {
         $channel = $message->channel;
+        $actor = $message->author;
 
         $channel->startTyping();
 
@@ -64,6 +66,18 @@ final class Leave extends PollCommand
             );
         }
 
+        // Prepare for it, but don't do it yet, since trolls may !join and lock the !leave
+//        if ( ! $this->isAllowedToRunLeave($actor, $dbChannel)) {
+//            $this->log($message, "Not allowed to !leave channel `%s'.", $dbChannel->getDiscordId());
+//            $channel->stopTyping();
+//            return $this->sendToast(
+//                $channel, $message,
+//                sprintf("You are not allowed to tell me to `!leave`"),
+//                [],
+//                30
+//            );
+//        }
+
         try {
             Database::$entityManager->remove($dbChannel);
             Database::$entityManager->flush();
@@ -90,6 +104,14 @@ final class Leave extends PollCommand
                 "in the _eternal sunshine of my spotless mind_."
             ),
             []
+        );
+    }
+
+    protected function isAllowedToRunLeave(User $user, Channel $dbChannel)
+    {
+        // Best use roles as well here
+        return (
+            ((string) $user->id) === $dbChannel->getJoinerId()
         );
     }
 
