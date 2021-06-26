@@ -127,8 +127,7 @@ abstract class Command
     {
         return sprintf(
             "<%s>",
-            $message->member->nickname
-            
+            !empty($message->member->nickname) ? $message->member->nickname : $message->author->username
         );
     }
 
