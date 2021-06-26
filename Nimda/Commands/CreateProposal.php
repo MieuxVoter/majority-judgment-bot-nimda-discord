@@ -38,18 +38,18 @@ class CreateProposal extends PollCommand
         $actor = $message->author;
 
         if ( ! $this->isChannelJoined($channel)) {
-            printf("Trying to use !proposal on a non-joined channel.\n");
+            $this->log($message,"Trying to use !proposal on a non-joined channel.");
             return reject();
         }
 
         $channel->startTyping();
 
-        printf("CreateProposal triggered.\n");
+        $this->log($message,"CreateProposal triggered.");
 
         $name = $args->get('name');
         $name = trim($name);
         if (empty($name)) {
-            printf("Showing documentation for !proposal to `%s'…\n", $actor);
+            $this->log($message, "Showing documentation for !proposal to `%s'…", $actor);
             $documentationContent =
                 "Please provide the **proposal name** as well, for example:\n".
                 "- `!proposal Bleu de Bresse`\n".
@@ -73,18 +73,18 @@ class CreateProposal extends PollCommand
 
         $pollId = $args->get('pollId');
         if (empty($pollId)) {
-            //printf("Guessing the poll identifier…\n");
+            //$this->log($message, "Guessing the poll identifier…\n");
             try {
                 $pollId = $this->getLatestPollIdOfChannel($channel);
             } catch (Exception $exception) {
-                printf("ERROR failed to fetch the latest poll id of channel `%s'.\n", $channel);
+                $this->log($message, "ERROR failed to fetch the latest poll id of channel `%s'.", $channel);
                 dump($exception);
                 $channel->stopTyping();
                 return reject();
             }
         }
 
-        printf(
+        $this->log($message,
             "[%s:%s] Add proposal `%s' to the poll #%d…\n",
             $channel->getId(), $actor->username, $name, $pollId
         );
@@ -96,7 +96,7 @@ class CreateProposal extends PollCommand
                 $triggerMessageDeletion->done(); // todo: is done() blocking?  Care about errors as well!
 
                 if (0 === $pollId) {
-                    printf("No poll found in channel `%s'.\n", $channel);
+                    $this->log($message, "No poll found in channel `%s'.", $channel);
                 }
 
                 $pollObject = $this->findPollById($pollId);
@@ -127,10 +127,11 @@ class CreateProposal extends PollCommand
                         if (get_class($error) === DiscordAPIException::class) {
                             /** @var DiscordAPIException $error */
                             if ($error->getCode() === 10008) {  // Unknown Message
-                                printf("WARN The message for poll %d has been deleted!\n", $pollId);
+                                $this->log($message, "WARN The message for poll %d has been deleted!", $pollId);
                                 $this->removePollFromDb($pollObject);
                                 $channel->stopTyping();
-                                // We resolve because we handled the case and there's no reason to go through the command error catcher
+                                // We resolve() because we handled the failure case and
+                                // there's no reason to go through the command error catcher
                                 return $resolve($this->sendToast(
                                     $channel,
                                     $message,
@@ -147,7 +148,7 @@ class CreateProposal extends PollCommand
                     })
                     ->then(function (Message $pollMessage) use ($resolve, $reject, $message, $channel, $name, $pollObject) {
 
-                        printf("Got the poll message, adding the proposal…\n");
+                        $this->log($message, "Got the poll message, adding the proposal…");
 
                         $proposalAddition = $this->addProposal(
                             $channel,
@@ -180,9 +181,9 @@ class CreateProposal extends PollCommand
                 $channel->stopTyping(true);
                 return $thing;
             },
-            function ($error) use ($channel) {
+            function ($error) use ($channel, $message) {
                 $channel->stopTyping(true);
-                printf("ERROR with the !proposal command:\n");
+                $this->log($message, "ERROR with the !proposal command:");
                 dump($error);
                 return $error;
             }

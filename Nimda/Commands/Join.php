@@ -28,7 +28,7 @@ final class Join extends PollCommand
 
         $channel->startTyping();
 
-        printf("!join\n");
+        $this->log($message, "!join");
 
         if ( ! $this->isMentioningMe($message)) {
             $channel->stopTyping();
@@ -52,7 +52,7 @@ final class Join extends PollCommand
         $message->delete(0, "command");
 
         if (null !== $dbChannel) {
-            printf("Already joined channel `%s'.\n", $dbChannel->getDiscordId());
+            $this->log($message, "Already joined channel `%s'.", $dbChannel->getDiscordId());
             //dump($dbChannel);
             $channel->stopTyping();
             return $this->sendToast(
@@ -87,7 +87,7 @@ final class Join extends PollCommand
             );
         }
 
-        printf("Joined channel `%s' !\n", $dbChannel->getDiscordId());
+        $this->log($message, "Joined channel `%s' !", $dbChannel->getDiscordId());
 
         $channel->stopTyping();
         return $channel->send(

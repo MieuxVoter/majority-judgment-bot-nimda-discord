@@ -28,7 +28,7 @@ final class Leave extends PollCommand
 
         $channel->startTyping();
 
-        printf("!leave\n");
+        $this->log($message, "!leave");
 
         /** @var Channel $dbChannel */
         $dbChannel = Database::repo(Channel::class)->findOneBy(
@@ -54,13 +54,13 @@ final class Leave extends PollCommand
         }
 
         if ( ! $hasBotJoinedChannel) {
-            printf("Already left channel `%s'.\n", $dbChannel->getDiscordId());
+            $this->log($message, "Already left channel `%s'.", $dbChannel->getDiscordId());
             $channel->stopTyping();
             return $this->sendToast(
                 $channel, $message,
-                sprintf("I am already subscribed to this channel."),
+                sprintf("I am not in this channel."),
                 [],
-                20
+                30
             );
         }
 
@@ -80,7 +80,7 @@ final class Leave extends PollCommand
             );
         }
 
-        printf("Left channel `%s' !\n", $dbChannel->getDiscordId());
+        $this->log($message, "Left channel `%s' !", $dbChannel->getDiscordId());
 
         $channel->stopTyping();
         return $channel->send(

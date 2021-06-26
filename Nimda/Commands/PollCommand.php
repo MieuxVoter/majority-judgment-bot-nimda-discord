@@ -272,7 +272,7 @@ abstract class PollCommand extends Command
         return new Promise(
             function($resolve, $reject) use ($triggerMessage, $proposalMessage, $proposalName, $poll) {
 
-                printf("Trying to write a new proposal `%s' into the database…\n", $proposalName);
+                $this->log($triggerMessage, "Trying to write a new proposal `%s' into the database…\n", $proposalName);
 
                 $proposal = new Proposal();
                 $proposal
@@ -392,8 +392,12 @@ abstract class PollCommand extends Command
 
                 return $channel
                     ->send('', $options)
-                    ->otherwise(function ($error) use ($proposalName) {
-                        printf("ERROR failed to send a new message for the proposal `%s'..\n", $proposalName);
+                    ->otherwise(function ($error) use ($proposalName, $triggerMessage) {
+                        $this->log(
+                            $triggerMessage,
+                            "ERROR failed to send a new message for the proposal `%s'..",
+                            $proposalName
+                        );
                         dump($error);
                     })
                     ->then(function (Message $proposalMessage) use ($resolve, $reject, $triggerMessage, $proposalName, $poll) {
@@ -404,8 +408,8 @@ abstract class PollCommand extends Command
 //                                dump($error);
 //                                return $reject($error);
 //                            })
-                            ->done(function (Proposal $dbProposal) {
-                                printf(
+                            ->done(function (Proposal $dbProposal) use ($triggerMessage) {
+                                $this->log($triggerMessage,
                                     "Wrote proposal #%d `%s' to database.\n",
                                     $dbProposal->getId(), $dbProposal->getName()
                                 );
@@ -414,12 +418,20 @@ abstract class PollCommand extends Command
                         return $this
                             ->addGradingReactions($proposalMessage, $poll->getAmountOfGrades())
                             ->then(
-                                function() use ($resolve, $proposalName, $proposalMessage) {
-                                    printf("Done adding urn reactions for proposal `%s'.\n", $proposalName);
+                                function() use ($resolve, $triggerMessage, $proposalName, $proposalMessage) {
+                                    $this->log(
+                                        $triggerMessage,
+                                        "Done adding urn reactions for proposal `%s'.",
+                                        $proposalName
+                                    );
                                     return $resolve($proposalMessage);
                                 },
-                                function ($error) use ($reject, $proposalName) {
-                                    printf("ERROR adding urn reactions to proposal `%s':\n", $proposalName);
+                                function ($error) use ($reject, $triggerMessage, $proposalName) {
+                                    $this->log(
+                                        $triggerMessage,
+                                        "ERROR adding urn reactions to proposal `%s':",
+                                        $proposalName
+                                    );
                                     dump($error);
                                     return $reject($error);
                                 }
@@ -468,11 +480,19 @@ abstract class PollCommand extends Command
      * @param TextChannelInterface $channel
      * @param Message|null $replyTo
      * @param string $content
+     * @param array $options
+     * @param int $duration
      * @return ExtendedPromiseInterface
      */
-    protected function sendToast(TextChannelInterface $channel, ?Message $replyTo, string $content, array $options, int $duration) : ExtendedPromiseInterface
-    {
-        // We create a Promise object because we want ExtendedPromiseInterface, not PromiseInterface
+    protected function sendToast(
+        TextChannelInterface $channel,
+        ?Message $replyTo,
+        string $content,
+        array $options,
+        int $duration
+    ) : ExtendedPromiseInterface {
+
+        // We create a Promise object mainly because we want ExtendedPromiseInterface, not PromiseInterface
         // Perhaps there is another way…?
         return new Promise(function ($resolve, $reject) use ($channel, $replyTo, $content, $options, $duration) {
 
@@ -485,10 +505,14 @@ abstract class PollCommand extends Command
             return $toastSent
                 ->otherwise($reject)
                 ->then(function (Message $toast) use ($resolve, $reject, $duration) {
-                    return $toast
-                        ->delete($duration, "toast")
-                        ->otherwise($reject)
-                        ->then($resolve);
+                    if ($duration >= 0) {
+                        return $toast
+                            ->delete($duration, "toast")
+                            ->otherwise($reject)
+                            ->then($resolve);
+                    } else {
+                        return $resolve($toast);
+                    }
                 });
 
         });

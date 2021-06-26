@@ -1,4 +1,4 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace Nimda\Commands;
 
@@ -44,7 +44,7 @@ final class CreatePoll extends PollCommand
 
         $subject = trim($args->get('subject'));
         if (empty($subject)) {
-            printf("Showing documentation for !poll to `%s'…\n", $actor->username);
+            $this->log($message, "Showing documentation for !poll to `%s'…", $actor->username);
             $documentationContent =
                 "Please provide the **poll subject** as well, for example:\n".
                 "⌨️ `!poll What should we do tonight?`\n".
@@ -74,7 +74,7 @@ final class CreatePoll extends PollCommand
         $subject = mb_strimwidth($subject, 0, $this->config['subjectMaxLength'], "…");
         $subject = mb_strtoupper($subject);
 
-        printf("Poll creation by '%s' with the following subject: %s\n", $message->author, $subject);
+        $this->log($message, "Poll creation by '%s' with the following subject: %s", $message->author, $subject);
 
         $pollMessageBody = sprintf(
             "%s",
@@ -99,14 +99,14 @@ final class CreatePoll extends PollCommand
                 $addedPoll = $this->addPollToDb($message, $pollMessage, $subject, $amountOfGrades);
 
                 return $addedPoll
-                    ->otherwise(function ($error) {
-                        printf("ERROR adding the poll to the database.\n");
+                    ->otherwise(function ($error) use ($message) {
+                        $this->log($message, "ERROR adding the poll to the database.");
                         dump($error);
                     })
                     ->then(
                         function (Poll $pollObject) use ($pollMessage, $message, $amountOfGrades) {
 
-                            printf("Added new poll to database.\n");
+                            $this->log($message, "Added new poll to database.");
                             dump($pollObject);
 
                             $pollId = $pollObject->getId();
@@ -117,17 +117,17 @@ final class CreatePoll extends PollCommand
                                 $pollMessage->content
                             ));
 
-                            printf("Started editing the poll message to add the poll ID…\n");
+                            $this->log($message, "Started editing the poll message to add the poll ID…");
 
                             return $pollMessageEdition
-                                ->otherwise(function ($error) {
-                                    printf("ERROR editing the poll to add its ID.\n");
+                                ->otherwise(function ($error) use ($message) {
+                                    $this->log($message, "ERROR editing the poll to add its ID.");
                                     dump($error);
 
                                     return $error;
                                 })
                                 ->then(function (Message $editedPollMessage) use ($message, $pollId, $amountOfGrades) {
-                                    printf("Done editing the poll message to add the poll ID.\n");
+                                    $this->log($message, "Done editing the poll message to add the poll ID.");
                                     return all([
 //                                        $this->addProposal(null, $editedPollMessage, "Proposal A", $pollId, $amountOfGrades),
 //                                        $this->addProposal(null, $editedPollMessage, "Proposal B", $pollId, $amountOfGrades),
@@ -143,8 +143,8 @@ final class CreatePoll extends PollCommand
 
         $commandPromise->then(
             null,
-            function ($error) {
-                printf("ERROR with the !poll command:\n");
+            function ($error) use ($message) {
+                $this->log($message, "ERROR with the !poll command:");
                 dump($error);
             }
         );

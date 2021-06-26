@@ -20,7 +20,7 @@ abstract class Command
     /**
      * @var array $config Configuration for the object
      */
-    protected $config;
+    protected array $config;
 
     /**
      * Command constructor.
@@ -53,7 +53,7 @@ abstract class Command
         }
 
         if (Discord::config()['deleteCommands'] === true) {
-            $message->delete(5);
+            $message->delete(5, "command");
         }
 
         return $this->trigger($message, $arguments);
@@ -93,7 +93,42 @@ abstract class Command
      */
     public function isConfigured(): bool
     {
-        return !empty($this->config['trigger']['commands'][0]);
+        return ! empty($this->config['trigger']['commands'][0]);
+    }
+
+    /**
+     * @internal Checks if a command matches
+     *
+     * @param string $message
+     * @param string $pattern
+     *
+     * @return bool
+     */
+    public function match($message, $pattern): bool
+    {
+        $onMatch = function ($matches) {
+            $pattern = $matches[2] ?? ".*";
+            return "?({$pattern})";
+        };
+
+        $pattern = \str_replace('/', '\/', $pattern);
+        $regex = '/^' . \preg_replace_callback(self::COMMAND_REGEX, $onMatch, $pattern) . '/miu';
+        return (bool)\preg_match($regex, $message, $matches);
+    }
+
+    public function log(Message $message, string $log, ...$parameters)
+    {
+        array_unshift($parameters, $this->getTriggerHash($message));
+        vprintf("%s ".$log."\n", $parameters);
+    }
+    
+    public function getTriggerHash(Message $message) : string
+    {
+        return sprintf(
+            "<%s>",
+            $message->member->nickname
+            
+        );
     }
 
     /**
@@ -122,25 +157,5 @@ abstract class Command
         }
 
         return $regexMatched;
-    }
-
-    /**
-     * @internal Checks a command matches
-     *
-     * @param string $message
-     * @param string $pattern
-     *
-     * @return bool
-     */
-    public function match($message, $pattern): bool
-    {
-        $onMatch = function ($matches) {
-            $pattern = $matches[2] ?? ".*";
-            return "?({$pattern})";
-        };
-
-        $pattern = \str_replace('/', '\/', $pattern);
-        $regex = '/^' . \preg_replace_callback(self::COMMAND_REGEX, $onMatch, $pattern) . '/miu';
-        return (bool)\preg_match($regex, $message, $matches);
     }
 }

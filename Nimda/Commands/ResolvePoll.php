@@ -32,31 +32,20 @@ class ResolvePoll extends PollCommand
     public function trigger(Message $message, Collection $args = null): PromiseInterface
     {
         $channel = $message->channel;
-        $actor = $message->author;
+        //$actor = $message->author;
 
         if ( ! $this->isChannelJoined($channel)) {
-            printf("Trying to use !result on a non-joined channel.\n");
+            $this->log($message, "Trying to use !result on a non-joined channel.");
             return reject();
         }
 
-//        print("ARGS\n");
-//        dump($args);
-
-//        dump($message->cleanContent);
-//        if ($message->mentions) {
-//            if ( ! empty($message->mentions->users->all())) {
-//                printf("Mentioned!\n");
-//                dump($message->mentions->users->first()->username);
-//            }
-//        }
-
         $pollId = $args->get('pollId');
         if (empty($pollId)) {
-            printf("Guessing the poll identifier…\n");
+            $this->log($message,"Guessing the poll identifier…");
             try {
                 $pollId = $this->getLatestPollIdOfChannel($channel);
             } catch (Exception $exception) {
-                printf("ERROR failed to fetch the latest poll id of channel `%s'.\n", $channel);
+                $this->log($message,"ERROR failed to fetch the latest poll id of channel `%s'.", $channel);
                 dump($exception);
                 return reject();
             }
@@ -71,7 +60,7 @@ class ResolvePoll extends PollCommand
         try {
             $poll = $this->findPollById($pollId);
         } catch (Exception $exception) {
-            sprintf("ERROR findPollById threw:\n");
+            $this->log($message,"ERROR findPollById threw:");
             dump($exception);
             $pollIsValid = false;
         }
@@ -81,7 +70,8 @@ class ResolvePoll extends PollCommand
         }
 
         if ( ! $pollIsValid) {
-            printf(
+            $this->log(
+                $message,
                 "%s no poll found with id `%s' in channel `%s'.\n",
                 $message->author->username, $pollId, $channel->getId()
             );
@@ -96,16 +86,9 @@ class ResolvePoll extends PollCommand
 
         $dbProposalsPromise = $this->getDbProposalsForPoll($poll);
         $commandPromise = $dbProposalsPromise
-            // Error is caught by bottom handler.  Do we need this?
-//            ->otherwise(
-//                function ($error) {
-//                    printf("ERROR when calling getDbProposalsForPoll:\n");
-//                    dump($error);
-//                }
-//            )
             ->then(
-                function ($dbProposals) use ($channel) {
-                    printf("Found %d proposals in the database.\n", count($dbProposals));
+                function ($dbProposals) use ($channel, $message) {
+                    $this->log($message,"Found %d proposals in the database.", count($dbProposals));
 
                     return new Promise(
                         function ($resolve, $reject) use ($channel, $dbProposals) {
@@ -116,10 +99,6 @@ class ResolvePoll extends PollCommand
 
                             $this
                                 ->getMessages($channel, $proposalsMessagesIds)
-//                                ->otherwise(function ($error) {
-//                                    printf("ERROR while fetching the messages of proposals\n:");
-//                                    dump($error);
-//                                })
                                 ->done(
                                     function (array $messages) use ($resolve, $dbProposals) {
                                         // Filter out messages that probably were deleted and we failed to fetch
@@ -141,13 +120,13 @@ class ResolvePoll extends PollCommand
                 }
             )
             ->then(
-                function ($things) use ($channel, $poll) {
+                function ($things) use ($channel, $message, $poll) {
                     /** @var Message[] $proposalsMessages */
                     [$proposalsObjects, $proposalsMessages] = $things;
 
 //                    $amountOfProposals = count($proposalsMessages);
 
-                    printf("Got %d messages.\n", count($proposalsMessages));
+                    $this->log($message,"Got %d messages.", count($proposalsMessages));
 
                     $amountOfParticipants = 0;
                     $pollTally = [];
@@ -229,7 +208,8 @@ class ResolvePoll extends PollCommand
 
                     $embed = new MessageEmbed([
                         'title' => sprintf(
-                            "⚖️ `#%d` — %s",
+                            "%s `#%d` — %s",
+                            $this->getPollEmoji(),
                             $poll->getId(),
                             $poll->getSubject()
                         ),
@@ -253,9 +233,10 @@ class ResolvePoll extends PollCommand
 //                            ],
                         ])
                         ->otherwise(
-                            function($error) {
-                                printf("ERROR sending the result:\n");
+                            function($error) use ($message) {
+                                $this->log($message,"ERROR sending the result:");
                                 dump($error);
+                                //return $error;
                             }
                         );
 
@@ -267,8 +248,9 @@ class ResolvePoll extends PollCommand
                 $channel->stopTyping();
                 return $thing;
             },
+            // This ought to be refactored through all commands
             function ($error) use ($channel, $message) {
-                printf("ERROR with the !result command:\n");
+                $this->log($message,"ERROR with the !result command:");
                 dump($error);
                 $insecureButHandy = "";
                 if ($this->shouldShowDebug() && ($error instanceof Throwable)) {
