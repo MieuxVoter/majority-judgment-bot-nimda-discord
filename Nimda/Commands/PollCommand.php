@@ -5,6 +5,8 @@ namespace Nimda\Commands;
 use CharlotteDunois\Yasmin\Interfaces\ChannelInterface;
 use CharlotteDunois\Yasmin\Interfaces\TextChannelInterface;
 use CharlotteDunois\Yasmin\Models\Message;
+use CharlotteDunois\Yasmin\Models\Permissions;
+use CharlotteDunois\Yasmin\Models\Role;
 use CharlotteDunois\Yasmin\Models\User;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
@@ -609,6 +611,18 @@ abstract class PollCommand extends Command
     protected function isMentioningMe(Message $message) : bool
     {
         return in_array($message->client->user, $message->mentions->users->all());
+    }
+
+    protected function isActorAdmin(Message $message) : bool
+    {
+        foreach ($message->member->roles->all() as $role) {
+            /** @var Role $role */
+            if ($role->permissions->has(Permissions::PERMISSIONS['ADMINISTRATOR'])) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function shouldShowDebug() : bool

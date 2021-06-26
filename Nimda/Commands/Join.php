@@ -30,6 +30,19 @@ final class Join extends PollCommand
 
         $this->log($message, "!join");
 
+        if ( ! $this->isActorAdmin($message)) {
+            $channel->stopTyping();
+
+            $this->log($message, "Actor is not admin.  Cancelling !join…");
+            return $this->sendToast(
+                $channel, $message,
+                sprintf(
+                    "You need to be the administrator of this server " .
+                    "to let me `!join` this channel.  Sorry about that.  💒"
+                ), [], -1
+            );
+        }
+
         if ( ! $this->isMentioningMe($message)) {
             $channel->stopTyping();
             return $this->sendToast(
