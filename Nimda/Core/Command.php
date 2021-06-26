@@ -116,9 +116,10 @@ abstract class Command
         return (bool)\preg_match($regex, $message, $matches);
     }
 
-    public function log(Message $message, string $log, ...$parameters)
+    public function log(?Message $message, string $log, ...$parameters)
     {
-        array_unshift($parameters, $this->getTriggerHash($message));
+        $triggerHash = (empty($message)) ? "<???>" : $this->getTriggerHash($message);
+        array_unshift($parameters, $triggerHash);
         vprintf("%s ".$log."\n", $parameters);
     }
     

@@ -8,6 +8,7 @@ use Nimda\Entity\Poll;
 use React\Promise\PromiseInterface;
 use function React\Promise\all;
 use function React\Promise\reject;
+use function React\Promise\resolve;
 
 /**
  *
@@ -28,6 +29,7 @@ final class CreatePoll extends PollCommand
         $defaultAmountOfGrades = 5;
         $minimumAmountOfGrades = 2;
         $maximumAmountOfGrades = 10; // if you change this, change $gradesEmotes in PollCommand as well
+
 
         $channel = $message->channel;
         $actor = $message->author;
@@ -70,9 +72,15 @@ final class CreatePoll extends PollCommand
 
             return reject($documentationShowed);
         }
-        // will perhaps fail with RTL languages
         $subject = mb_strimwidth($subject, 0, $this->config['subjectMaxLength'], "…");
         $subject = mb_strtoupper($subject);
+
+        $preset = $this->findMatchingPreset($message, $subject);
+        if ( ! empty($preset)) {
+            if ( ! empty($preset['subject'])) {
+                $subject = mb_strtoupper($preset['subject']);
+            }
+        }
 
         $this->log($message, "Poll creation by '%s' with the following subject: %s", $message->author, $subject);
 
@@ -94,7 +102,7 @@ final class CreatePoll extends PollCommand
 
         $commandPromise = $channel
             ->send("", $options)
-            ->then(function (Message $pollMessage) use ($args, $message, $subject, $amountOfGrades) {
+            ->then(function (Message $pollMessage) use ($args, $message, $channel, $subject, $amountOfGrades, $preset) {
 
                 $addedPoll = $this->addPollToDb($message, $pollMessage, $subject, $amountOfGrades);
 
@@ -104,7 +112,7 @@ final class CreatePoll extends PollCommand
                         dump($error);
                     })
                     ->then(
-                        function (Poll $pollObject) use ($pollMessage, $message, $amountOfGrades) {
+                        function (Poll $pollObject) use ($pollMessage, $message, $amountOfGrades, $preset) {
 
                             $this->log($message, "Added new poll to database.");
                             dump($pollObject);
@@ -126,14 +134,25 @@ final class CreatePoll extends PollCommand
 
                                     return $error;
                                 })
-                                ->then(function (Message $editedPollMessage) use ($message, $pollId, $amountOfGrades) {
+                                ->then(function (Message $editedPollMessage) use ($message, $preset, $pollObject, $pollId, $amountOfGrades) {
                                     $this->log($message, "Done editing the poll message to add the poll ID.");
-                                    return all([
-//                                        $this->addProposal(null, $editedPollMessage, "Proposal A", $pollId, $amountOfGrades),
-//                                        $this->addProposal(null, $editedPollMessage, "Proposal B", $pollId, $amountOfGrades),
-//                                        $this->addProposal(null, $editedPollMessage, "Proposal C", $pollId, $amountOfGrades),
-                                    ])->then(function() use ($message) {
-                                        return $message->delete();
+
+                                    $p = resolve();
+                                    if ( ! empty($preset) && ! empty($preset['proposals'])) {
+                                        foreach ($preset['proposals'] as $proposalName) {
+                                            $p = $p->then(function () use ($pollObject, $proposalName, $message, $editedPollMessage) {
+                                                return $this->addProposal(
+                                                    $editedPollMessage->channel,
+                                                    $message,
+                                                    $proposalName,
+                                                    $pollObject
+                                                );
+                                            });
+                                        }
+                                    }
+
+                                    return $p->then(function() use ($message) {
+                                        return $message->delete(0, "command");
                                     });
                                 });
 

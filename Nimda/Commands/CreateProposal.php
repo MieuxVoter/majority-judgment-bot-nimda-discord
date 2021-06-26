@@ -26,7 +26,7 @@ use function React\Promise\reject;
  * Class CreatePoll
  * @package Nimda\Commands
  */
-class CreateProposal extends PollCommand
+final class CreateProposal extends PollCommand
 {
 
     /**

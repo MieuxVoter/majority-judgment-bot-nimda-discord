@@ -69,6 +69,55 @@ abstract class PollCommand extends Command
         return "⛔️";
     }
 
+    // Eventually, move these presets to database, and allow admins to set their own.
+    protected array $presets = [
+        "/^week$/ui" => [
+            'subject' => "Which day of the week?",
+            'proposals' => [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+            ],
+        ],
+        "/^week5$/ui" => [
+            'subject' => "Which day of the week?",
+            'proposals' => [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+            ],
+        ],
+        "/^semaine$/ui" => [
+            'subject' => "Quel jour de la semaine ?",
+            'proposals' => [
+                "Lundi",
+                "Mardi",
+                "Mercredi",
+                "Jeudi",
+                "Vendredi",
+                "Samedi",
+                "Dimanche",
+            ],
+        ],
+        "/^semaine5$/ui" => [
+            'subject' => "Quel jour de la semaine ?",
+            'proposals' => [
+                "Lundi",
+                "Mardi",
+                "Mercredi",
+                "Jeudi",
+                "Vendredi",
+            ],
+        ],
+    ];
+
+
     #  _____  _                       _    ____                        _
     # |  __ \(_)                     | |  / __ \                      (_)
     # | |  | |_ ___  ___ ___  _ __ __| | | |  | |_   _  ___ _ __ _   _ _ _ __   __ _
@@ -338,6 +387,20 @@ abstract class PollCommand extends Command
         return true;
     }
 
+    protected function findMatchingPreset(Message $message, string $subject) : ?array
+    {
+        $presets = $this->presets;  // fetch from database eventually
+        foreach ($presets as $regex => $preset) {
+            if (1 !== preg_match($regex, $subject)) {
+                continue;
+            }
+
+            return $preset;
+        }
+
+        return null;
+    }
+
     #  _    _ _       _       _                    _
     # | |  | (_)     | |     | |                  | |
     # | |__| |_  __ _| |__   | |     _____   _____| |
@@ -410,7 +473,7 @@ abstract class PollCommand extends Command
 //                            })
                             ->done(function (Proposal $dbProposal) use ($triggerMessage) {
                                 $this->log($triggerMessage,
-                                    "Wrote proposal #%d `%s' to database.\n",
+                                    "Wrote proposal #%d `%s' to database.",
                                     $dbProposal->getId(), $dbProposal->getName()
                                 );
                             }, $reject);
@@ -452,22 +515,28 @@ abstract class PollCommand extends Command
     protected function addGradingReactions(Message $message, int $gradingSize) : PromiseInterface
     {
         $gradesEmotes = $this->gradesEmotes[$gradingSize];
-        $promises = [];
+
+        $p = resolve();
 
         for ($gradeIndex = 0; $gradeIndex < $gradingSize; $gradeIndex++) {
             $gradeEmote = $gradesEmotes[$gradeIndex];
-            $reactionAdditionPromise = new Promise(
-                function ($resolve) use ($message, $gradeEmote) {
-                    // API throttling is a thing, let's cool our horses
-                    return $message->client->addTimer(5, function () use ($resolve, $message, $gradeEmote) {
-                        $resolve($message->react($gradeEmote));
-                    });
+
+            $p = $p->then(
+                function () use ($gradeEmote, $message) {
+                    return new Promise(
+                        function ($resolve) use ($message, $gradeEmote) {
+                            // API throttling is a thing, let's cool our horses
+                            return $message->client->addTimer(1, function () use ($resolve, $message, $gradeEmote) {
+                                $resolve($message->react($gradeEmote));
+                            });
+                        }
+                    );
                 }
             );
-            $promises[] = $reactionAdditionPromise;
+
         }
 
-        return all($promises);
+        return $p;
     }
 
 
