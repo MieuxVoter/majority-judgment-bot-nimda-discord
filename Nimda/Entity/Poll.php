@@ -28,6 +28,19 @@ class Poll
     protected int $id;
 
     /**
+     * The Channel this Poll belongs to.
+     *
+     * @ORM\ManyToOne(
+     *     targetEntity=Channel::class,
+     *     inversedBy="polls",
+     * )
+     */
+    protected Channel $channel;
+//     * @ORM\JoinColumn(
+//     *     onDelete="CASCADE",
+//     * )
+
+    /**
      * The proposals (aka. candidates) for this poll.
      *
      * @ORM\OneToMany(
@@ -36,6 +49,10 @@ class Poll
      * )
      */
     protected PersistentCollection $proposals;
+//     *     cascade={
+//     *         "remove",
+//     *     },
+//     *     orphanRemoval=true,
 
     /**
      * Vendor Identifier of the User that created the poll.
@@ -114,6 +131,25 @@ class Poll
     public function getId(): int
     {
         return $this->id;
+    }
+
+    /**
+     * @return Channel
+     */
+    public function getChannel(): Channel
+    {
+        return $this->channel;
+    }
+
+    /**
+     * @param Channel $channel
+     * @return Poll
+     */
+    public function setChannel(Channel $channel): self
+    {
+        $this->channel = $channel;
+
+        return $this;
     }
 
     /**

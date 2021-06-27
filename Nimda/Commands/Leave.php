@@ -7,6 +7,7 @@ use CharlotteDunois\Yasmin\Models\User;
 use Illuminate\Support\Collection;
 use Nimda\Core\Database;
 use Nimda\Entity\Channel;
+use Nimda\Entity\Poll;
 use React\Promise\PromiseInterface;
 
 /**
@@ -79,6 +80,15 @@ final class Leave extends PollCommand
         }
 
         try {
+            // Homemade cascade as a tired fix to bypass owning side shenanigans with doctrine cascade removal
+            // I surmise our relationships should be owned by the parent, but that's annoying.  Anyway, this works.
+            foreach ($dbChannel->getPolls() as $pollToDelete) {
+                /** @var Poll $pollToDelete */
+                foreach ($pollToDelete->getProposals() as $proposalToDelete) {
+                   Database::$entityManager->remove($proposalToDelete);
+                }
+                Database::$entityManager->remove($pollToDelete);
+            }
             Database::$entityManager->remove($dbChannel);
             Database::$entityManager->flush();
         } catch (\Exception $exception) {
@@ -90,7 +100,7 @@ final class Leave extends PollCommand
                     $exception->getMessage()
                 ),
                 [],
-                300
+                -1
             );
         }
 

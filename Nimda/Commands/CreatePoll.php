@@ -37,6 +37,7 @@ final class CreatePoll extends PollCommand
         if ( ! $this->isChannelJoined($channel)) {
             return $this->remindThatJoinIsRequired($message);
         }
+        $dbChannel = $this->findDbChannel($channel);
 
         $amountOfGrades = $args->get('grades');
         if (empty($amountOfGrades)) {
@@ -102,9 +103,9 @@ final class CreatePoll extends PollCommand
 
         $commandPromise = $channel
             ->send("", $options)
-            ->then(function (Message $pollMessage) use ($args, $message, $channel, $subject, $amountOfGrades, $preset) {
+            ->then(function (Message $pollMessage) use ($args, $message, $channel, $dbChannel, $subject, $amountOfGrades, $preset) {
 
-                $addedPoll = $this->addPollToDb($message, $pollMessage, $subject, $amountOfGrades);
+                $addedPoll = $this->addPollToDb($message, $pollMessage, $dbChannel, $subject, $amountOfGrades);
 
                 return $addedPoll
                     ->otherwise(function ($error) use ($message) {

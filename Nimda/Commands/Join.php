@@ -87,6 +87,7 @@ final class Join extends PollCommand
             Database::$entityManager->persist($dbChannel);
             Database::$entityManager->flush();
         } catch (\Exception $exception) {
+            dump($exception);
             $channel->stopTyping();
             return $this->sendToast(
                 $channel, $message,

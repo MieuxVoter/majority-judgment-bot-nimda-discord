@@ -5,6 +5,7 @@ namespace Nimda\Entity;
 
 
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ORM\PersistentCollection;
 
 
 /**
@@ -23,6 +24,16 @@ class Channel
      * @ORM\GeneratedValue
      */
     protected int $id;
+
+    /**
+     * All the polls created on this channel.
+     *
+     * @ORM\OneToMany(
+     *     targetEntity=Poll::class,
+     *     mappedBy="channel",
+     * )
+     */
+    protected ?PersistentCollection $polls = null;
 
     /**
      * Name of the channel (if we can read it).
@@ -98,6 +109,27 @@ class Channel
     }
 
     /**
+     * @return PersistentCollection|null
+     */
+    public function getPolls(): ?PersistentCollection
+    {
+        return $this->polls;
+    }
+
+    /**
+     * @param Poll $poll
+     * @return Channel
+     */
+    public function addPoll(Poll $poll) : self
+    {
+        if ( ! $this->polls->contains($poll)) {
+            $this->polls->add($poll);
+        }
+
+        return $this;
+    }
+
+    /**
      * @return string
      */
     public function getName(): string
@@ -107,10 +139,13 @@ class Channel
 
     /**
      * @param string $name
+     * @return Channel
      */
-    public function setName(string $name): void
+    public function setName(string $name): self
     {
         $this->name = $name;
+
+        return $this;
     }
 
     /**
@@ -123,10 +158,13 @@ class Channel
 
     /**
      * @param string $discordId
+     * @return Channel
      */
-    public function setDiscordId(string $discordId): void
+    public function setDiscordId(string $discordId): self
     {
         $this->discordId = $discordId;
+
+        return $this;
     }
 
     /**
@@ -139,10 +177,13 @@ class Channel
 
     /**
      * @param string $guildId
+     * @return Channel
      */
-    public function setGuildId(string $guildId): void
+    public function setGuildId(string $guildId): self
     {
         $this->guildId = $guildId;
+
+        return $this;
     }
 
     /**
@@ -155,10 +196,13 @@ class Channel
 
     /**
      * @param string $guildName
+     * @return Channel
      */
-    public function setGuildName(string $guildName): void
+    public function setGuildName(string $guildName): self
     {
         $this->guildName = $guildName;
+
+        return $this;
     }
 
     /**
@@ -171,10 +215,13 @@ class Channel
 
     /**
      * @param string $joinerId
+     * @return Channel
      */
-    public function setJoinerId(string $joinerId): void
+    public function setJoinerId(string $joinerId): self
     {
         $this->joinerId = $joinerId;
+
+        return $this;
     }
 
     /**
@@ -187,10 +234,13 @@ class Channel
 
     /**
      * @param string $joinerUsername
+     * @return Channel
      */
-    public function setJoinerUsername(string $joinerUsername): void
+    public function setJoinerUsername(string $joinerUsername): self
     {
         $this->joinerUsername = $joinerUsername;
+
+        return $this;
     }
 
     /**
@@ -203,10 +253,13 @@ class Channel
 
     /**
      * @param string $pollCreationRoles
+     * @return Channel
      */
-    public function setPollCreationRoles(string $pollCreationRoles): void
+    public function setPollCreationRoles(string $pollCreationRoles): self
     {
         $this->pollCreationRoles = $pollCreationRoles;
+
+        return $this;
     }
 
     /**
@@ -219,10 +272,13 @@ class Channel
 
     /**
      * @param string $proposalCreationRoles
+     * @return Channel
      */
-    public function setProposalCreationRoles(string $proposalCreationRoles): void
+    public function setProposalCreationRoles(string $proposalCreationRoles): self
     {
         $this->proposalCreationRoles = $proposalCreationRoles;
+
+        return $this;
     }
 
     /**
@@ -235,10 +291,13 @@ class Channel
 
     /**
      * @param string $voteViaReactionRoles
+     * @return Channel
      */
-    public function setVoteViaReactionRoles(string $voteViaReactionRoles): void
+    public function setVoteViaReactionRoles(string $voteViaReactionRoles): self
     {
         $this->voteViaReactionRoles = $voteViaReactionRoles;
+
+        return $this;
     }
 
     /**
@@ -251,10 +310,13 @@ class Channel
 
     /**
      * @param int $usage
+     * @return Channel
      */
-    public function setUsage(int $usage): void
+    public function setUsage(int $usage): self
     {
         $this->usage = $usage;
+
+        return $this;
     }
 
 

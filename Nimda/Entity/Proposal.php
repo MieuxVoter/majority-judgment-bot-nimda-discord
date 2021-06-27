@@ -34,6 +34,9 @@ class Proposal
      * )
      */
     protected Poll $poll;
+//     *     cascade={
+//     *         "persist",
+//     *     },
 
     /**
      * Vendor Identifier of the User that created the poll.

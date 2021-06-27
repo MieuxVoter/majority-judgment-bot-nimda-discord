@@ -49,6 +49,18 @@ final class ResolvePoll extends PollCommand
                 dump($exception);
                 return reject();
             }
+
+            if (0 === $pollId) {
+                return reject($this->sendToast(
+                    $channel, $message,
+                    "There are no polls on this channel to display the results of.\n".
+                    "If you'd like me to be able to display the results of polls of other channels,\n".
+                    "it can be done ; please open a ticket in our tracker,\n",
+                    [],
+                    -1
+                ));
+            }
+
         }
 
         $message->delete(10, "command");
@@ -78,7 +90,7 @@ final class ResolvePoll extends PollCommand
             $channel->stopTyping();
             return reject($this->sendToast(
                 $channel, $message,
-                "The poll was not found on this channel.  Try specifying its identifier with `!result ID`?",
+                "The poll was not found on this channel.  Try specifying the poll IDentifier with `!result ID`?",
                 [],
                 10
             ));

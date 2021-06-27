@@ -263,16 +263,18 @@ abstract class PollCommand extends Command
      *
      * @param Message $triggerMessage
      * @param Message $pollMessage
+     * @param Channel $dbChannel
      * @param $subject
      * @param $amountOfGrades
      * @return ExtendedPromiseInterface
      */
-    protected function addPollToDb(Message $triggerMessage, Message $pollMessage, $subject, $amountOfGrades) : ExtendedPromiseInterface
+    protected function addPollToDb(Message $triggerMessage, Message $pollMessage, Channel $dbChannel, $subject, $amountOfGrades) : ExtendedPromiseInterface
     {
-        return new Promise(function($resolve, $reject) use ($triggerMessage, $pollMessage, $subject, $amountOfGrades) {
+        return new Promise(function($resolve, $reject) use ($triggerMessage, $pollMessage, $dbChannel, $subject, $amountOfGrades) {
 
             $poll = new Poll();
             $poll
+                ->setChannel($dbChannel)
                 ->setSubject($subject)
                 ->setAmountOfGrades($amountOfGrades)
                 ->setAuthorVendorId($triggerMessage->author->id)
