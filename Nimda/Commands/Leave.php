@@ -67,16 +67,16 @@ final class Leave extends PollCommand
         }
 
         // Prepare for it, but don't do it yet, since trolls may !join and lock the !leave
-//        if ( ! $this->isAllowedToRunLeave($actor, $dbChannel)) {
-//            $this->log($message, "Not allowed to !leave channel `%s'.", $dbChannel->getDiscordId());
-//            $channel->stopTyping();
-//            return $this->sendToast(
-//                $channel, $message,
-//                sprintf("You are not allowed to tell me to `!leave`"),
-//                [],
-//                30
-//            );
-//        }
+        if ( ! $this->isAllowedToRunLeave($message)) {
+            $this->log($message, "Not allowed to !leave channel `%s'.", $dbChannel->getDiscordId());
+            $channel->stopTyping();
+            return $this->sendToast(
+                $channel, $message,
+                sprintf("You are not allowed to tell me to `!leave`"),
+                [],
+                30
+            );
+        }
 
         try {
             Database::$entityManager->remove($dbChannel);
@@ -107,11 +107,11 @@ final class Leave extends PollCommand
         );
     }
 
-    protected function isAllowedToRunLeave(User $user, Channel $dbChannel)
+    protected function isAllowedToRunLeave(Message $message)
     {
         // Best use roles as well here
         return (
-            ((string) $user->id) === $dbChannel->getJoinerId()
+            $this->isMessageActorAdmin($message)
         );
     }
 

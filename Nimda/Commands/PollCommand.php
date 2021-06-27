@@ -613,7 +613,7 @@ abstract class PollCommand extends Command
         return in_array($message->client->user, $message->mentions->users->all());
     }
 
-    protected function isActorAdmin(Message $message) : bool
+    protected function isMessageActorAdmin(Message $message) : bool
     {
         foreach ($message->member->roles->all() as $role) {
             /** @var Role $role */

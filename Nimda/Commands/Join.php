@@ -30,7 +30,7 @@ final class Join extends PollCommand
 
         $this->log($message, "!join");
 
-        if ( ! $this->isActorAdmin($message)) {
+        if ( ! $this->isMessageActorAdmin($message)) {
             $channel->stopTyping();
 
             $this->log($message, "Actor is not admin.  Cancelling !join…");
@@ -53,7 +53,7 @@ final class Join extends PollCommand
                     "`!join @Majority Judgment`"
                 ),
                 [],
-                10
+                30
             );
         }
 
@@ -62,7 +62,6 @@ final class Join extends PollCommand
             ['discordId' => $channel->getId()]
         );
 
-        $message->delete(0, "command");
 
         if (null !== $dbChannel) {
             $this->log($message, "Already joined channel `%s'.", $dbChannel->getDiscordId());
