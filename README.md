@@ -40,13 +40,16 @@ If you know how to review for memleaks, Merge Requests are most welcome!
 
 ## Install MieuxVoter's bot
 
+You may be eligible for our alpha partnership program.
+(you probably are, we just can't publish the link for everyone until we know how the bot scales)
+
 1. Join [our chat](https://discord.gg/rAAQG9S)
-2. Ask a member (_@Hirondelle_) for the link to the bot
+2. Ask a member (☯️) for the link to the bot
 3. Accept that the bot comes without guarantees and this is beta
 3. Follow the link to Discord's private wonderland
-4. Type `!poll` in your channel
-5. Consider making a small donation to MieuxVoter
-6. Report/fix bugs, suggest/make improvements, etc.
+4. Type `!join` in your channel
+5. Consider making a donation to MieuxVoter
+6. Report & fix bugs, suggest & make improvements, etc.
 
 
 ## Make your own bot
@@ -72,7 +75,7 @@ Once all packages are installed, run `php start.php`.
 
 ## Prerequisites
 
-* PHP version `^7.1`
+* PHP version `^7.4`
 * PHP `PDO` extensions, and `sqlite`
 * PHP `mbstring` extension
 * A discord bot token
