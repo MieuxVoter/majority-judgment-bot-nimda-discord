@@ -1,0 +1,21 @@
+version: "3"
+
+# Run with:
+#   docker-compose up -d
+
+# IMPORTANT: CREATE OR UPDATE THE DATABASE
+#   docker exec mj-bot-discord vendor/bin/doctrine orm:schema-tool:update --force --dump-sql
+
+services:
+
+  majority-judgment-bot-nimda-discord:
+    container_name: "mj-bot-discord"
+    build: .
+    restart: always
+    volumes:
+    - "./var:/usr/src/app/var"
+    environment:
+      APP_ENV: "prod"
+    # Nope.
+    #command:
+    #- "./update-db.sh"
