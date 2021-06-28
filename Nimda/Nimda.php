@@ -111,11 +111,13 @@ final class Nimda
 
         throw_if(Discord::config()['client_token'] === '', \Exception::class, 'No client token set in config.');
 
-        if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN' && posix_getuid() === 0) {
-            printf("[WARNING] Running Nimda as root is dangerous!\nStart anyway? Y/N: ");
-
-            $answer = strcasecmp(rtrim(fgets(STDIN)), 'y');
-            throw_if($answer !== 0, \Exception::class, 'Nimda running as root, user aborted.');
-        }
+        // Let Nimda run as root in docker containers
+        // Perhaps we could keep the check but also check an env var that would be set in our Dockerfile?
+//        if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN' && posix_getuid() === 0) {
+//            printf("[WARNING] Running Nimda as root is dangerous!\nStart anyway? Y/N: ");
+//
+//            $answer = strcasecmp(rtrim(fgets(STDIN)), 'y');
+//            throw_if($answer !== 0, \Exception::class, 'Nimda running as root, user aborted.');
+//        }
     }
 }
