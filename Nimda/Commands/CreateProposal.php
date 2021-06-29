@@ -158,7 +158,9 @@ final class CreateProposal extends PollCommand
                         );
 
                         return $proposalAddition->then(
-                            function (Message $proposalMessage) use ($resolve) {
+                            function (Message $proposalMessage) use ($resolve, $channel) {
+                                // feels weird to stop typing after the reactions are added, let's stop now
+                                $channel->stopTyping(true);
                                 return $resolve($proposalMessage);
                             },
                             function ($error) use ($reject) {
@@ -178,11 +180,11 @@ final class CreateProposal extends PollCommand
 
         return $commandPromise->then(
             function ($thing) use ($channel) {
-                $channel->stopTyping(true);
+                $channel->stopTyping();
                 return $thing;
             },
             function ($error) use ($channel, $message) {
-                $channel->stopTyping(true);
+                $channel->stopTyping();
                 $this->log($message, "ERROR with the !proposal command:");
                 dump($error);
                 return $error;
