@@ -201,13 +201,15 @@ final class ResolvePoll extends PollCommand
                     $tallyString = join('_', array_map(function (ProposalResult $proposalResult){
                         return join('-', $proposalResult->getTally());
                     }, $leaderboard));
-                    $imgUrl = sprintf("https://oas.mieuxvoter.fr/%s.png", $tallyString);
-                    // We could also use Miprem directly here @roipoussiere
 
-                    $imgUrl = (string) Url::parse($imgUrl)
+                    // We could also use Miprem directly here @roipoussiere
+                    $imgUrl = Url::parse(sprintf("https://oas.mieuxvoter.fr/%s.png", $tallyString))
                         ->setQueryParameter("w", 800)
-                        ->setQueryParameter("h", floor(max(494, $amountOfProposals * 30 + 40)))
+                        ->setQueryParameter("h", floor(max(494, $amountOfProposals * 40 + 40)))
                     ;
+                    $imgUrl = $imgUrl->setQueryParameter('proposals', array_map(function(ProposalResult $proposalResult) {
+                        return $proposalResult->getProposal()->getName();
+                    }, $leaderboard));
 
                     $description = "";
                     foreach ($leaderboard as $proposalResult) {
@@ -234,7 +236,7 @@ final class ResolvePoll extends PollCommand
                         ),
                         'description' => $description,
                         'image' => [
-                            'url' => $imgUrl,
+                            'url' => (string) $imgUrl,
                             'width' => 810,
                             'height' => 500,
                         ],
