@@ -7,8 +7,8 @@ class ResolvePoll
     public static $config = [
         'trigger' => [
             'commands' => [
-                '(?:result) {pollId:[0-9]+}',
-                '(?:result)',
+                '(?:result|judgment) {pollId:[0-9]+}',
+                '(?:result|judgment)',
             ]
         ],
     ];
