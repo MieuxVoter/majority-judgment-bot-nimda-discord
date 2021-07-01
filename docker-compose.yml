@@ -5,10 +5,13 @@ version: "3"
 
 # IMPORTANT: CREATE OR UPDATE THE DATABASE
 #   docker exec mj-bot-discord vendor/bin/doctrine orm:schema-tool:update --force --dump-sql
+# If you use the volume ./var you may need to update your database.using the command above
+# It will also create the database if missing.
+# The docker image creates a database but the volume hides it.  Advice on how to handle this is most welcome.
 
 services:
 
-  majority-judgment-bot-nimda-discord:
+  mj-bot-discord:
     container_name: "mj-bot-discord"
     build: .
     restart: always
