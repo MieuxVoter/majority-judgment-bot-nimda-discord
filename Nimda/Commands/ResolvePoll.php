@@ -14,6 +14,7 @@ use Nimda\Entity\Proposal;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use Throwable;
+use Wa72\Url\Url;
 use function React\Promise\reject;
 
 /**
@@ -140,6 +141,7 @@ final class ResolvePoll extends PollCommand
 
                     $this->log($message,"Got %d messages.", count($proposalsMessages));
 
+                    $amountOfProposals = count($proposalsObjects);
                     $amountOfParticipants = 0;
                     $pollTally = [];
                     $gradesEmotes = $this->gradesEmotes[$poll->getAmountOfGrades()];
@@ -201,6 +203,11 @@ final class ResolvePoll extends PollCommand
                     }, $leaderboard));
                     $imgUrl = sprintf("https://oas.mieuxvoter.fr/%s.png", $tallyString);
                     // We could also use Miprem directly here @roipoussiere
+
+                    $imgUrl = (string) Url::parse($imgUrl)
+                        ->setQueryParameter("w", 800)
+                        ->setQueryParameter("h", floor(max(494, $amountOfProposals * 30 + 40)))
+                    ;
 
                     $description = "";
                     foreach ($leaderboard as $proposalResult) {
