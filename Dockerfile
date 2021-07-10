@@ -47,7 +47,7 @@ RUN echo 'http://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/reposit
 #ADD https://raw.githubusercontent.com/mlocati/docker-php-extension-installer/master/install-php-extensions /usr/local/bin/
 #RUN chmod uga+x /usr/local/bin/install-php-extensions && sync
 
-# Install Composer.
+# Install Composer
 ENV PATH=$PATH:/root/composer2/vendor/bin:/root/composer1/vendor/bin \
   COMPOSER_ALLOW_SUPERUSER=1 \
   COMPOSER_HOME=/root/composer2 \
@@ -67,10 +67,6 @@ RUN cd /opt \
   && composer1 global require hirak/prestissimo \
   # Remove installer files.
   && rm /opt/composer-setup.php /opt/composer-setup.sha384sum
-
-
-
-
 
 
 WORKDIR	/usr/src/app

@@ -4,7 +4,7 @@ namespace Nimda\Commands\Configuration;
 
 class CreatePoll
 {
-    public static $config = [
+    public static array $config = [
         'subjectMaxLength' => 255,
         'trigger' => [
             'commands' => [

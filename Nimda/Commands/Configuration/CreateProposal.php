@@ -4,7 +4,7 @@ namespace Nimda\Commands\Configuration;
 
 class CreateProposal
 {
-    public static $config = [
+    public static array $config = [
         'proposalMaxLength' => 48,
         'trigger' => [
             'commands' => [

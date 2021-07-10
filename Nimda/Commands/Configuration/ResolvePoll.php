@@ -4,7 +4,7 @@ namespace Nimda\Commands\Configuration;
 
 class ResolvePoll
 {
-    public static $config = [
+    public static array $config = [
         'trigger' => [
             'commands' => [
                 '(?:result|judgment) {pollId:[0-9]+}',
