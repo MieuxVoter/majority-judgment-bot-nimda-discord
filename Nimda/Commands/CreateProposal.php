@@ -8,7 +8,6 @@ use Exception;
 use Illuminate\Support\Collection;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
-use function React\Promise\all;
 use function React\Promise\reject;
 
 /**
@@ -23,7 +22,7 @@ use function React\Promise\reject;
  *
  *
  *
- * Class CreatePoll
+ * Class CreateProposal
  * @package Nimda\Commands
  */
 final class CreateProposal extends PollCommand
@@ -85,15 +84,14 @@ final class CreateProposal extends PollCommand
         }
 
         $this->log($message,
-            "[%s:%s] Add proposal `%s' to the poll #%d…\n",
+            "[%s:%s] Add proposal `%s' to the poll #%d…",
             $channel->getId(), $actor->username, $name, $pollId
         );
 
         $commandPromise = new Promise(
             function ($resolve, $reject) use ($channel, $message, $name, $pollId) {
 
-                $triggerMessageDeletion = $message->delete(0, "command");
-                $triggerMessageDeletion->done(); // todo: is done() blocking?  Care about errors as well!
+                $message->delete(0, "command");
 
                 if (0 === $pollId) {
                     $this->log($message, "No poll found in channel `%s'.", $channel);

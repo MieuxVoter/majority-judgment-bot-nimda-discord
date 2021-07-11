@@ -74,7 +74,7 @@ final class VoteViaReaction extends Event
                 ->then(
                     function ($thing) {
                         // This is called even if the user is not in the reaction.
-                        //print("Removed iser from reaction.\n");
+                        //print("Removed user from reaction.\n");
                     }
                 )
             ;

@@ -48,7 +48,6 @@ class Poll
      *     mappedBy="poll",
      *     fetch="EAGER",
      * )
-     * @var PersistentCollection
      */
     protected PersistentCollection $proposals;
 //     *     cascade={

@@ -1,9 +1,11 @@
 version: "3"
 
 # Run with:
-#   docker-compose up -d
+#   docker-compose up --detach
 
 # IMPORTANT: CREATE OR UPDATE THE DATABASE
+#   docker exec mj-bot-discord sh update-db.sh
+# or
 #   docker exec mj-bot-discord vendor/bin/doctrine orm:schema-tool:update --force --dump-sql
 # If you use the volume ./var you may need to update your database.using the command above
 # It will also create the database if missing.

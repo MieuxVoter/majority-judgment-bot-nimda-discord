@@ -56,7 +56,7 @@ final class Help extends PollCommand
 Greetings!  _I am help to help._ 🤖
 
 Here are the commands I will respond to:
-⌨ `!join` to have me **join a channel** (admins only)
+⌨ `!join` to have me **join a channel** _(admins only)_
 ⌨ `!leave` to have me **leave a channel** _(I will forget everything ⚠)_
 ⌨ `!poll` to **start a new poll**
 ⌨ `!proposal` to **add a proposal**
