@@ -46,7 +46,9 @@ class Poll
      * @ORM\OneToMany(
      *     targetEntity=Proposal::class,
      *     mappedBy="poll",
+     *     fetch="EAGER",
      * )
+     * @var PersistentCollection
      */
     protected PersistentCollection $proposals;
 //     *     cascade={
