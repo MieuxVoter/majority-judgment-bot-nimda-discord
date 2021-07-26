@@ -16,7 +16,7 @@ services:
   mj-bot-discord:
     container_name: "mj-bot-discord"
     build: .
-    restart: always
+    #restart: always
     volumes:
     - "./var:/usr/src/app/var"
     environment:
