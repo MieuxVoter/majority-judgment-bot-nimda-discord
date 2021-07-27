@@ -22,7 +22,7 @@
     "doctrine/cache": "^2.0",
     "doctrine/orm": "^2.9",
     "illuminate/support": "^8.48",
-    "laravel-discord/yasmin": "^0.8",
+    "laravel-discord/yasmin": "@dev",
     "mieuxvoter/majority-judgment": "^1.0",
     "symfony/cache": "^5.3",
     "symfony/dotenv": "^5.3",
@@ -37,5 +37,11 @@
     "psr-4": {
       "Nimda\\": "Nimda/"
     }
-  }
+  },
+  "repositories": [
+    {
+      "type": "git",
+      "url": "https://github.com/domi41/Yasmin.git"
+    }
+  ]
 }
