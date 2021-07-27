@@ -16,6 +16,10 @@ class SetPresence extends Timer
      */
     public function trigger(Client $client): PromiseInterface
     {
+        if (empty($client->user)) {
+            print("WARNING: User not available in Client, skipping SetPresence…\n");
+            return reject();
+        }
         return $client->user->setPresence($this->config['presence'])->then(function (ClientUser $clientUser) {
             if($this->config['avatar'] === '') {
                 return reject(new InvalidArgumentException('Avatar not set'));
