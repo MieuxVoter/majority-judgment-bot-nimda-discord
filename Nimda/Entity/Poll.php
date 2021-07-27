@@ -49,7 +49,7 @@ class Poll
      *     fetch="EAGER",
      * )
      */
-    protected PersistentCollection $proposals;
+    protected ?PersistentCollection $proposals;
 //     *     cascade={
 //     *         "remove",
 //     *     },
