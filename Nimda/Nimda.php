@@ -72,9 +72,11 @@ final class Nimda
      */
     public function run(): void
     {
+        printf("Running Nimda…\n");
         Conversation::init();
         $this->client->login(Discord::config()['client_token'])->done();
         $this->loop->run();
+        printf("Loop has ended.\n");
     }
 
     /**
@@ -91,12 +93,33 @@ final class Nimda
         );
     }
 
+
+    /**
+     * Runs when a connection fails
+     */
+    public function onError($error): void
+    {
+        printf('ERROR: %s' . PHP_EOL, $error);
+    }
+
+    /**
+     * Runs when clients emits debug info
+     */
+    public function onDebug($msg): void
+    {
+        printf('Debug: %s' . PHP_EOL, $msg);
+    }
+
+
+
     /**
      * @internal Register events for Nimda to handle
      */
     private function register(): void
     {
         $this->client->on('ready', [$this, 'onReady']);
+        $this->client->on('error', [$this, 'onError']);
+        $this->client->on('debug', [$this, 'onDebug']);
         $this->client->on('message', [$this->commands, 'onMessage']);
     }
 
