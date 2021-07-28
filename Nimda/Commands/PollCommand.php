@@ -14,6 +14,7 @@ use Doctrine\ORM\ORMException;
 use Exception;
 use Nimda\Core\Command;
 use Nimda\Core\Database;
+use Nimda\Core\Logger;
 use Nimda\Entity\Channel;
 use Nimda\Entity\Poll;
 use Nimda\Entity\Proposal;
@@ -147,11 +148,11 @@ abstract class PollCommand extends Command
                 $messages = [];
 
                 if (empty($messagesIds)) {
-                    printf("No messages to fetch.\n");
+                    Logger::warn("No messages to fetch.");
                     return $resolve($messages);
                 }
 
-                printf("Starting to fetch %d messages…\n", count($messagesIds));
+                Logger::debug(sprintf("Starting to fetch %d messages…", count($messagesIds)));
 
                 $p = resolve(null);
 
@@ -187,7 +188,7 @@ abstract class PollCommand extends Command
                 )
                 ->done(
                     function (array $messages) use ($resolve) {
-                        printf("Done fetching %d messages.\n", count($messages));
+                        Logger::debug(sprintf("Done fetching %d messages.", count($messages)));
                         //dump($messages);  // flood
                         return $resolve($messages);
                     },

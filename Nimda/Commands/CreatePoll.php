@@ -4,6 +4,7 @@ namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
+use Nimda\Core\Logger;
 use Nimda\Entity\Poll;
 use React\Promise\PromiseInterface;
 use function React\Promise\all;
@@ -47,7 +48,7 @@ final class CreatePoll extends PollCommand
 
         $subject = trim($args->get('subject'));
         if (empty($subject)) {
-            $this->log($message, "Showing documentation for !poll to `%s'…", $actor->username);
+            Logger::info(sprintf("Showing documentation for !poll to `%s'…", $actor->username));
             $documentationContent =
                 "Please provide the **poll subject** as well, for example:\n".
                 "⌨️ `!poll What should we do tonight?`\n".
@@ -83,7 +84,7 @@ final class CreatePoll extends PollCommand
             }
         }
 
-        $this->log($message, "Poll creation by '%s' with the following subject: %s", $message->author, $subject);
+        Logger::info(sprintf("Poll creation by `%s' on subject `%s'", $message->author, $subject));
 
         $pollMessageBody = sprintf(
             "%s",
@@ -109,14 +110,14 @@ final class CreatePoll extends PollCommand
 
                 return $addedPoll
                     ->otherwise(function ($error) use ($message) {
-                        $this->log($message, "ERROR adding the poll to the database.");
+                        Logger::error("ERROR adding the poll to the database.");
                         dump($error);
                     })
                     ->then(
                         function (Poll $pollObject) use ($pollMessage, $message, $amountOfGrades, $preset) {
 
-                            $this->log($message, "Added new poll to database.");
-                            dump($pollObject);
+                            Logger::debug("Added new poll to database.");
+                            //dump($pollObject);
 
                             $pollId = $pollObject->getId();
 
@@ -126,17 +127,17 @@ final class CreatePoll extends PollCommand
                                 $pollMessage->content
                             ));
 
-                            $this->log($message, "Started editing the poll message to add the poll ID…");
+                            Logger::debug("Started editing the poll message to add the poll ID…");
 
                             return $pollMessageEdition
                                 ->otherwise(function ($error) use ($message) {
-                                    $this->log($message, "ERROR editing the poll to add its ID.");
+                                    Logger::error("ERROR editing the poll to add its ID.");
                                     dump($error);
 
                                     return $error;
                                 })
                                 ->then(function (Message $editedPollMessage) use ($message, $preset, $pollObject, $pollId, $amountOfGrades) {
-                                    $this->log($message, "Done editing the poll message to add the poll ID.");
+                                    Logger::debug("Done editing the poll message to add the poll ID.");
 
                                     $p = resolve();
                                     if ( ! empty($preset) && ! empty($preset['proposals'])) {
@@ -164,7 +165,7 @@ final class CreatePoll extends PollCommand
         $commandPromise->then(
             null,
             function ($error) use ($message) {
-                $this->log($message, "ERROR with the !poll command:");
+                Logger::error("ERROR with the !poll command:");
                 dump($error);
             }
         );
@@ -177,7 +178,7 @@ final class CreatePoll extends PollCommand
         return (
             parent::isConfigured()
             &&
-            !empty($this->config['subjectMaxLength'])
+            ! empty($this->config['subjectMaxLength'])
         );
     }
 

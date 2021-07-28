@@ -8,6 +8,7 @@ use Nimda\Core\CommandContainer;
 use Nimda\Core\Conversation;
 use Nimda\Core\Database;
 use Nimda\Core\EventContainer;
+use Nimda\Core\Logger;
 use Nimda\Core\TimerContainer;
 use React\EventLoop\Factory;
 use React\EventLoop\LoopInterface;
@@ -72,11 +73,10 @@ final class Nimda
      */
     public function run(): void
     {
-        printf("Running Nimda…\n");
+        Logger::debug("Running Nimda…");
         Conversation::init();
         $this->client->login(Discord::config()['client_token'])->done();
         $this->loop->run();
-        printf("Loop has ended.\n");
     }
 
     /**
@@ -84,22 +84,19 @@ final class Nimda
      */
     public function onReady(): void
     {
-        printf('Logged in as %s created on %s' . PHP_EOL, $this->client->user->tag,
-            $this->client->user->createdAt->format('d.m.Y H:i:s')
-        );
+        Logger::info(sprintf('Logged in as %s', $this->client->user->tag));
 
         $this->client->addPeriodicTimer(Discord::config()['conversation']['timeout'],
             [Conversation::class, 'refreshConversations']
         );
     }
 
-
     /**
      * Runs when a connection fails
      */
     public function onError($error): void
     {
-        printf('ERROR: %s' . PHP_EOL, $error);
+        Logger::error(sprintf('CLIENT ERROR: %s', $error));
     }
 
     /**
@@ -107,10 +104,8 @@ final class Nimda
      */
     public function onDebug($msg): void
     {
-        printf('Debug: %s' . PHP_EOL, $msg);
+        Logger::debug(sprintf('%s', $msg));
     }
-
-
 
     /**
      * @internal Register events for Nimda to handle

@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use MieuxVoter\MajorityJudgment\MajorityJudgmentDeliberator;
 use MieuxVoter\MajorityJudgment\Model\Result\ProposalResult;
 use MieuxVoter\MajorityJudgment\Model\Tally\TwoArraysPollTally;
+use Nimda\Core\Logger;
 use Nimda\Entity\Proposal;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
@@ -36,17 +37,17 @@ final class ResolvePoll extends PollCommand
         //$actor = $message->author;
 
         if ( ! $this->isChannelJoined($channel)) {
-            $this->log($message, "Trying to use !result on a non-joined channel.");
+            Logger::warn("Trying to use !result on a non-joined channel.");
             return reject();
         }
 
         $pollId = $args->get('pollId');
         if (empty($pollId)) {
-            $this->log($message,"Guessing the poll identifier…");
+            Logger::debug("Guessing the poll identifier…");
             try {
                 $pollId = $this->getLatestPollIdOfChannel($channel);
             } catch (Exception $exception) {
-                $this->log($message,"ERROR failed to fetch the latest poll id of channel `%s'.", $channel);
+                Logger::error(sprintf("ERROR failed to fetch the latest poll id of channel `%s'.", $channel));
                 dump($exception);
                 return reject();
             }
@@ -73,7 +74,7 @@ final class ResolvePoll extends PollCommand
         try {
             $poll = $this->findPollById($pollId);
         } catch (Exception $exception) {
-            $this->log($message,"ERROR findPollById threw:");
+            Logger::error("ERROR: findPollById threw:");
             dump($exception);
             $pollIsValid = false;
         }
@@ -83,11 +84,10 @@ final class ResolvePoll extends PollCommand
         }
 
         if ( ! $pollIsValid) {
-            $this->log(
-                $message,
-                "%s no poll found with id `%s' in channel `%s'.\n",
+            Logger::warn(sprintf(
+                "%s no poll found with id `%s' in channel `%s'.",
                 $message->author->username, $pollId, $channel->getId()
-            );
+            ));
             $channel->stopTyping();
             return reject($this->sendToast(
                 $channel, $message,
@@ -101,7 +101,7 @@ final class ResolvePoll extends PollCommand
         $commandPromise = $dbProposalsPromise
             ->then(
                 function ($dbProposals) use ($channel, $message) {
-                    $this->log($message,"Found %d proposals in the database.", count($dbProposals));
+                    Logger::debug(sprintf("Found %d proposals in the database.", count($dbProposals)));
 
                     return new Promise(
                         function ($resolve, $reject) use ($channel, $dbProposals) {
@@ -139,7 +139,7 @@ final class ResolvePoll extends PollCommand
 
 //                    $amountOfProposals = count($proposalsMessages);
 
-                    $this->log($message,"Got %d messages.", count($proposalsMessages));
+                    Logger::debug(sprintf("Got %d messages.", count($proposalsMessages)));
 
                     $amountOfProposals = count($proposalsObjects);
                     $amountOfParticipants = 0;
@@ -255,7 +255,7 @@ final class ResolvePoll extends PollCommand
                         ])
                         ->otherwise(
                             function($error) use ($message) {
-                                $this->log($message,"ERROR sending the result:");
+                                Logger::error("ERROR sending the result:");
                                 dump($error);
                                 //return $error;
                             }
@@ -271,7 +271,7 @@ final class ResolvePoll extends PollCommand
             },
             // This ought to be refactored through all commands
             function ($error) use ($channel, $message) {
-                $this->log($message,"ERROR with the !result command:");
+                Logger::error("ERROR with the !result command:");
                 dump($error);
                 $insecureButHandy = "";
                 if ($this->shouldShowDebug() && ($error instanceof Throwable)) {
@@ -289,7 +289,7 @@ final class ResolvePoll extends PollCommand
                             "Please provide the following data:\n".
                             sprintf("```\n%s\n```\n", $insecureButHandy).
                             ""
-                        ) : "_Tip: run the bot with `APP_ENV=dev` to see more information about the error here._\n"
+                        ) : "_Tip_: run the bot with `APP_ENV=dev` to see more information about the error here.\n"
                     ).
                     "",
                     [
