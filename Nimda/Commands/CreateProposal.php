@@ -6,6 +6,7 @@ use CharlotteDunois\Yasmin\HTTP\DiscordAPIException;
 use CharlotteDunois\Yasmin\Models\Message;
 use Exception;
 use Illuminate\Support\Collection;
+use Nimda\Core\Logger;
 use React\Promise\Promise;
 use React\Promise\PromiseInterface;
 use function React\Promise\reject;
@@ -37,18 +38,18 @@ final class CreateProposal extends PollCommand
         $actor = $message->author;
 
         if ( ! $this->isChannelJoined($channel)) {
-            $this->log($message,"Trying to use !proposal on a non-joined channel.");
+            Logger::warn($message, "Trying to use !proposal on a non-joined channel.");
             return reject();
         }
 
         $channel->startTyping();
 
-        $this->log($message,"CreateProposal triggered.");
-
         $name = $args->get('name');
         $name = trim($name);
+
+        Logger::info($message, "Requesting creation of the proposal `%s'…", $name);
         if (empty($name)) {
-            $this->log($message, "Showing documentation for !proposal to `%s'…", $actor);
+            Logger::info($message, "Showing documentation for !proposal to `%s'…", $actor);
             $documentationContent =
                 "Please provide the **proposal name** as well, for example:\n".
                 "- `!proposal Bleu de Bresse`\n".
