@@ -52,7 +52,7 @@ class Logger
             return;
         }
         $now = new \DateTime();
-        printf("%s %s" . PHP_EOL, $now, $message);
+        printf("%s %s" . PHP_EOL, $now->format('Y-m-d H:i:s'), $message);
     }
 
 }
