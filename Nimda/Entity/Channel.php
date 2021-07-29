@@ -4,6 +4,7 @@
 namespace Nimda\Entity;
 
 
+use CharlotteDunois\Yasmin\Interfaces\ChannelInterface;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\PersistentCollection;
 
@@ -319,5 +320,14 @@ class Channel
         return $this;
     }
 
-
+    /**
+     * Checks if this database channel matches the provided driver channel.
+     *
+     * @param ChannelInterface $channel
+     * @return bool
+     */
+    public function isChannel(ChannelInterface $channel): bool
+    {
+        return $this->getDiscordId() === $channel->getId();
+    }
 }

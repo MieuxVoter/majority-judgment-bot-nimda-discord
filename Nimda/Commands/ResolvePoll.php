@@ -81,6 +81,8 @@ final class ResolvePoll extends PollCommand
 
         if (empty($poll)) {
             $pollIsValid = false;
+        } else if ( ! $poll->getChannel()->isChannel($channel)) {
+            $pollIsValid = false;
         }
 
         if ( ! $pollIsValid) {
