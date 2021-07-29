@@ -11,6 +11,7 @@ use CharlotteDunois\Yasmin\Models\User;
 use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
 use Doctrine\ORM\ORMException;
+use Doctrine\ORM\Query;
 use Exception;
 use Nimda\Core\Command;
 use Nimda\Core\Database;
@@ -215,7 +216,20 @@ abstract class PollCommand extends Command
     protected function findPollById(int $pollId) : ?Poll
     {
         /** @var ?Poll $poll */
-        $poll = Database::repo(Poll::class)->find($pollId);
+//        $poll = Database::repo(Poll::class)->find($pollId); // we want to force a refresh instead
+        $qb = Database::repo(Poll::class)->createQueryBuilder('p')
+            ->where('p.id = :id')
+            ->setParameter('id', $pollId);
+        try {
+            $poll = $qb->getQuery()
+                ->setHint(Query::HINT_REFRESH, true)
+                ->getSingleResult();
+        } catch (NoResultException $e) {
+            return null;
+        } catch (NonUniqueResultException $e) {
+            Logger::error("Multiple polls with ID `%s'!", $pollId);
+            return null;
+        }
 
         if (empty($poll)) {
             return null;
