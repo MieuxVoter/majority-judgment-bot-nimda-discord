@@ -4,6 +4,8 @@
 namespace Nimda\Core;
 
 
+use CharlotteDunois\Yasmin\Models\Message;
+
 /**
  * Homemade logger utility, so we can later on use monolog or such.
  *
@@ -18,41 +20,52 @@ class Logger
     const LEVEL_INFO = 3;
     const LEVEL_DEBUG = 4;
 
-    static function error(string $message)
+    static function error(...$things)
     {
-        self::log(self::LEVEL_ERROR, $message);
+        self::log(self::LEVEL_ERROR, ...$things);
     }
 
-    static function warn(string $message)
+    static function warn(...$things)
     {
-        self::log(self::LEVEL_WARN, $message);
+        self::log(self::LEVEL_WARN, ...$things);
     }
 
-    static function info(string $message)
+    static function info(...$things)
     {
-        self::log(self::LEVEL_INFO, $message);
+        self::log(self::LEVEL_INFO, ...$things);
     }
 
-    static function debug(string $message)
+    static function debug(...$things)
     {
-        self::log(self::LEVEL_DEBUG, $message);
+        self::log(self::LEVEL_DEBUG, ...$things);
     }
 
-    static function log(int $level, string $message)
+    static function log(int $level, ...$things)
     {
         if (
             (
                 $level === self::LEVEL_DEBUG
                 ||
-                $level === self::LEVEL_DEBUG
+                $level === self::LEVEL_INFO
             )
             &&
             getenv('APP_ENV') !== 'dev'
         ) {
             return;
         }
+        $triggerMessage = null;
+        if (0 < count($things)) {
+            if ($things[0] instanceof Message) {
+                $triggerMessage = array_shift($things);
+            }
+        }
+        if (0 === count($things)) {
+            throw new \InvalidArgumentException();
+        }
+        $message = array_shift($things);
         $now = new \DateTime();
-        printf("%s %s" . PHP_EOL, $now->format('Y-m-d H:i:s'), $message);
+        array_unshift($things, $now->format('Y-m-d H:i:s'));
+        printf("%s " . $message . PHP_EOL, ...$things);
     }
 
 }
