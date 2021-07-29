@@ -214,6 +214,12 @@ final class ResolvePoll extends PollCommand
                     }, $leaderboard));
 
                     $description = "";
+                    if (0 === count($leaderboard)) {
+                        $description = "⚒ This poll has no proposals attached to it.\n" .
+                            "You may add proposals to this poll with the following command:\n" .
+                            sprintf("`!proposal %d My amazing proposal`", $poll->getId());
+                    }
+
                     foreach ($leaderboard as $proposalResult) {
                         switch ($proposalResult->getRank()) {
                             case 1:
