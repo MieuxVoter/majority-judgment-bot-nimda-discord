@@ -49,7 +49,7 @@ class Poll
      *     fetch="EAGER",
      * )
      */
-    protected ?PersistentCollection $proposals = null;
+    protected $proposals;  // Do NOT set my type
 //     *     cascade={
 //     *         "remove",
 //     *     },
