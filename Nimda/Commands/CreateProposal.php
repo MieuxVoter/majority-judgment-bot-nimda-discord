@@ -70,33 +70,42 @@ final class CreateProposal extends PollCommand
         $name = mb_strimwidth($name, 0, $this->config['proposalMaxLength'], "…");
         $name = mb_strtoupper($name);
 
-
         $pollId = $args->get('pollId');
         if (empty($pollId)) {
             //$this->log($message, "Guessing the poll identifier…\n");
             try {
                 $pollId = $this->getLatestPollIdOfChannel($channel);
             } catch (Exception $exception) {
-                $this->log($message, "ERROR failed to fetch the latest poll id of channel `%s'.", $channel);
+                Logger::error($message, "Failed to fetch the latest poll id of channel `%s'.", $channel);
                 dump($exception);
                 $channel->stopTyping();
                 return reject();
             }
         }
 
-        $this->log($message,
-            "[%s:%s] Add proposal `%s' to the poll #%d…",
-            $channel->getId(), $actor->username, $name, $pollId
+        if (0 === $pollId) {
+            Logger::warn($message, "No poll found in channel `%s'.", $channel);
+            $channel->stopTyping();
+            return $this->sendToast(
+                $channel,
+                $message,
+                sprintf(
+                    "The poll %s could not be found.  " .
+                    "Is there even a poll in this channel?  " ,
+                    $this->getPollEmoji()
+                ), [],30
+            );
+        }
+
+        Logger::info($message,
+            "Adding proposal `%s' to the poll #%d…",
+            $name, $pollId
         );
 
         $commandPromise = new Promise(
             function ($resolve, $reject) use ($channel, $message, $name, $pollId) {
 
                 $message->delete(0, "command");
-
-                if (0 === $pollId) {
-                    $this->log($message, "No poll found in channel `%s'.", $channel);
-                }
 
                 $pollObject = $this->findPollById($pollId);
                 if (empty($pollObject)) {
@@ -118,7 +127,20 @@ final class CreateProposal extends PollCommand
                 }
 
                 // Check against the channel id, so we don't add proposals to foreign polls.
-                // fetchMessage handles this check for now, yet best add one later here for good measure
+                if ($pollObject->getChannelVendorId() !== $channel->getId()) {
+                    $channel->stopTyping();
+                    return $reject($this->sendToast(
+                        $channel,
+                        $message,
+                        sprintf(
+                            "The poll %s `%d` could not be found in this channel.  ".
+                            "It belongs to another channel.",
+                            $this->getPollEmoji(), $pollId
+                        ),
+                        [],
+                        60
+                    ));
+                }
 
                 return $channel
                     ->fetchMessage($pollObject->getMessageVendorId())
@@ -126,7 +148,7 @@ final class CreateProposal extends PollCommand
                         if (get_class($error) === DiscordAPIException::class) {
                             /** @var DiscordAPIException $error */
                             if ($error->getCode() === 10008) {  // Unknown Message
-                                $this->log($message, "WARN The message for poll %d has been deleted!", $pollId);
+                                Logger::warn($message, "The message for poll %d could not be found.", $pollId);
                                 $this->removePollFromDb($pollObject);
                                 $channel->stopTyping();
                                 // We resolve() because we handled the failure case and
@@ -147,7 +169,7 @@ final class CreateProposal extends PollCommand
                     })
                     ->then(function (Message $pollMessage) use ($resolve, $reject, $message, $channel, $name, $pollObject) {
 
-                        $this->log($message, "Got the poll message, adding the proposal…");
+                        Logger::debug($message, "Got the poll message, adding the proposal…");
 
                         $proposalAddition = $this->addProposal(
                             $channel,
@@ -184,7 +206,7 @@ final class CreateProposal extends PollCommand
             },
             function ($error) use ($channel, $message) {
                 $channel->stopTyping();
-                $this->log($message, "ERROR with the !proposal command:");
+                Logger::error($message, "ERROR with the !proposal command:");
                 dump($error);
                 return $error;
             }
