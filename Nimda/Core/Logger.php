@@ -42,6 +42,7 @@ class Logger
 
     static function log(int $level, ...$things)
     {
+        $output = "";
         if (
             (
                 $level === self::LEVEL_DEBUG
@@ -57,6 +58,7 @@ class Logger
         if (0 < count($things)) {
             if ($things[0] instanceof Message) {
                 $triggerMessage = array_shift($things);
+                $output .= self::getTriggerHash($triggerMessage) . " ";
             }
         }
         if (0 === count($things)) {
@@ -65,7 +67,15 @@ class Logger
         $message = array_shift($things);
         $now = new \DateTime();
         array_unshift($things, $now->format('Y-m-d H:i:s'));
-        printf("%s " . $message . PHP_EOL, ...$things);
+        $output .= sprintf("%s " . $message . PHP_EOL, ...$things);
+        print($output);
     }
 
+    static function getTriggerHash(Message $message) : string
+    {
+        return sprintf(
+            "<%s>",
+            !empty($message->member->nickname) ? $message->member->nickname : $message->author->username
+        );
+    }
 }
