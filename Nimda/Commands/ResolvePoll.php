@@ -62,7 +62,8 @@ final class ResolvePoll extends PollCommand
                     -1
                 ));
             }
-
+        } else {
+            $pollId = (int) $pollId;
         }
 
         $message->delete(10, "command");
