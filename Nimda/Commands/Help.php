@@ -4,6 +4,7 @@ namespace Nimda\Commands;
 
 use CharlotteDunois\Yasmin\Models\Message;
 use Illuminate\Support\Collection;
+use Nimda\Core\Logger;
 use React\Promise\PromiseInterface;
 
 /**
@@ -24,7 +25,7 @@ final class Help extends PollCommand
     {
         $channel = $message->channel;
 
-        $this->log($message, "!help");
+        Logger::info($message, "!help");
 
         $channel->startTyping();
 
@@ -63,7 +64,7 @@ Here are the commands I will respond to:
 ⌨ `!result` to **show the result** of a poll
 
 The full 📖 documentation and source code can be found here : https://github.com/MieuxVoter/majority-judgment-bot-nimda-discord
-If you'd like to support this bot, please consider giving some 💰 money to someone that needs it.
+If you'd like to support this bot, please consider giving some 💰 money to someone who needs it.
 > _We're all in this together._
 MSG
             ),
@@ -71,7 +72,7 @@ MSG
         )->otherwise(
             function ($error) use ($message, $channel) {
                 $channel->stopTyping();
-                $this->log($message, "Failed to respond to !help");
+                Logger::error($message, "Failed to respond to !help");
             }
         )->then(
             function (Message $m) use ($channel) {
